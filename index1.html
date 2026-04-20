@@ -3431,7 +3431,7 @@ body.is-booting #panelDesc {
   <button class="action-primary" type="button" id="primaryActionBtnMobile">Add to cart</button>
 </div>
 
-  <div class="loading hidden" id="loadingState" style="display:none !important;">Loading <code>data/site_items.json</code>…</div>
+  <div class="loading hidden" id="loadingState" style="display:none !important;">Loading <code>data/site_items.csv</code>…</div>
   <div class="error-state hidden" id="errorState" style="display:none !important;"></div>
 
 <script>
@@ -4243,55 +4243,6 @@ body.is-booting #panelDesc {
     return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: "base" });
   }
 
-  function transformRawRecordsToProducts(rawRecords) {
-    SITE_COPY.about = getFirstFilledSiteCopy(rawRecords, ["site_about", "Site_About", "SITE_ABOUT"]);
-    SITE_COPY.terms = getFirstFilledSiteCopy(rawRecords, ["site_terms", "Site_Terms", "SITE_TERMS"]);
-
-    return rawRecords
-      .map((record, index) => {
-        try {
-          return normaliseProduct(record, index);
-        } catch (error) {
-          console.warn("Skipping invalid data row.", record, error);
-          return null;
-        }
-      })
-      .filter(item => item && item.visible && item.media.length > 0)
-      .sort(compareProductsForDisplay)
-      .map((item, sortedIndex) => ({
-        ...item,
-        displayOrderIndex: sortedIndex
-      }));
-  }
-
-  async function loadProductsFromJSON() {
-    const response = await fetch("data/site_items.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Could not load data/site_items.json (${response.status})`);
-    }
-
-    const payload = await response.json();
-    const rawRecords = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload && payload.records)
-        ? payload.records
-        : null;
-
-    if (!rawRecords) {
-      throw new Error("JSON data/site_items.json must be an array of records or an object with a records array.");
-    }
-
-    return transformRawRecordsToProducts(
-      rawRecords.map(record => {
-        const out = {};
-        Object.keys(record || {}).forEach((key) => {
-          out[normalizeHeader(key)] = String(record[key] ?? "").trim();
-        });
-        return out;
-      })
-    );
-  }
-
   async function loadProductsFromCSV() {
     const response = await fetch("data/site_items.csv", { cache: "no-store" });
     if (!response.ok) {
@@ -4317,16 +4268,24 @@ body.is-booting #panelDesc {
       return out;
     });
 
-    return transformRawRecordsToProducts(rawRecords);
-  }
+    SITE_COPY.about = getFirstFilledSiteCopy(rawRecords, ["site_about", "Site_About", "SITE_ABOUT"]);
+    SITE_COPY.terms = getFirstFilledSiteCopy(rawRecords, ["site_terms", "Site_Terms", "SITE_TERMS"]);
 
-  async function loadProducts() {
-    try {
-      return await loadProductsFromJSON();
-    } catch (jsonError) {
-      console.warn("JSON load failed, falling back to CSV.", jsonError);
-      return await loadProductsFromCSV();
-    }
+    return rawRecords
+      .map((record, index) => {
+        try {
+          return normaliseProduct(record, index);
+        } catch (error) {
+          console.warn("Skipping invalid CSV row.", record, error);
+          return null;
+        }
+      })
+      .filter(item => item && item.visible && item.media.length > 0)
+      .sort(compareProductsForDisplay)
+      .map((item, sortedIndex) => ({
+        ...item,
+        displayOrderIndex: sortedIndex
+      }));
   }
 
   function getMediaKind(src) {
@@ -5802,7 +5761,7 @@ body.is-booting #panelDesc {
   // =========================================================
   async function boot() {
     try {
-      PRODUCTS = await loadProducts();
+      PRODUCTS = await loadProductsFromCSV();
       renderSiteCopyPanels();
 
       if (!PRODUCTS.length) {
