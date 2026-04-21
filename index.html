@@ -4454,22 +4454,46 @@ body.is-booting #panelDesc {
     );
   }
 
+  let lastSurfaceLightboxTriggerAt = 0;
+
+  function shouldIgnoreSurfaceLightboxEvent(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest(
+      ".panel, .nav-panel, .cart-drawer, .site-footer, .lightbox-controls, .lightbox-topbar, .btn, button, a, input, select, textarea"
+    );
+  }
+
+  function triggerLightboxFromSurface(index, event) {
+    if (index !== currentCenteredIndex) return;
+    if (shouldIgnoreSurfaceLightboxEvent(event && event.target)) return;
+
+    const now = Date.now();
+    if (now - lastSurfaceLightboxTriggerAt < 250) return;
+    lastSurfaceLightboxTriggerAt = now;
+
+    cycleLightbox(index);
+  }
+
   function handleVisibleMediaClick(index, event) {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
-    if (!event || !event.target || !event.target.closest) return;
-    if (event.target.closest(".panel, .nav-panel, .cart-drawer, .site-footer, button, a, input, select, textarea")) return;
-    if (!event.target.closest(".card, .media-frame, .lightbox-stage, .media-item, .video-loading-shell, .video-loading-overlay, .video-loading-panel")) return;
-    cycleLightbox(index);
+
+    const target = event && event.target;
+    if (!target) return;
+    if (shouldIgnoreSurfaceLightboxEvent(target)) return;
+
+    const isMediaSurface = !!target.closest(".media-frame, .lightbox-stage, .media-item, .video-loading-shell, .video-loading-overlay, .video-loading-panel");
+    if (!isMediaSurface) return;
+
+    triggerLightboxFromSurface(index, event);
   }
 
   function updateVisibleMediaHoverCursor(index, event) {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
 
-    const target = event.target;
-    const isMedia = target && target.classList && target.classList.contains("media-item");
-    const hit = !!(isMedia && pointHitsVisibleMediaPixels(target, event.clientX, event.clientY));
+    const target = event && event.target;
+    const hit = !!(target && !shouldIgnoreSurfaceLightboxEvent(target) && target.closest(".media-frame, .lightbox-stage, .media-item, .video-loading-shell, .video-loading-overlay, .video-loading-panel"));
 
     const mediaNodes = [];
     if (card._els && card._els.frame) {
@@ -4481,8 +4505,8 @@ body.is-booting #panelDesc {
 
     mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
 
-    if (hit && target.classList) {
-      target.classList.add("is-media-clickable-zone");
+    if (hit) {
+      mediaNodes.forEach((node) => node.classList.add("is-media-clickable-zone"));
     }
   }
 
@@ -4627,10 +4651,12 @@ body.is-booting #panelDesc {
       card.append(frame, lightbox, fade);
       card._fade = fade;
 
-      card.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
-      card.addEventListener("touchstart", (event) => beginSlideTap(index, event), { passive: true });
-      card.addEventListener("touchmove", (event) => moveSlideTap(event), { passive: true });
-      card.addEventListener("touchend", (event) => endSlideTap(index, event), { passive: true });
+      frame.addEventListener("click", (event) => triggerLightboxFromSurface(index, event));
+      lightbox.addEventListener("click", (event) => triggerLightboxFromSurface(index, event));
+      frame.addEventListener("touchend", (event) => triggerLightboxFromSurface(index, event), { passive: true });
+      lightbox.addEventListener("touchend", (event) => triggerLightboxFromSurface(index, event), { passive: true });
+      frame.addEventListener("mouseup", (event) => triggerLightboxFromSurface(index, event));
+      lightbox.addEventListener("mouseup", (event) => triggerLightboxFromSurface(index, event));
       frame.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       lightbox.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       frame.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
@@ -5622,47 +5648,6 @@ body.is-booting #panelDesc {
   // =========================================================
   // LIGHTBOX
   // =========================================================
-  const slideTapState = {
-    activeIndex: null,
-    startX: 0,
-    startY: 0,
-    moved: false
-  };
-
-  function beginSlideTap(index, event) {
-    const touch = (event.touches && event.touches[0]) || event;
-    if (!touch) return;
-    slideTapState.activeIndex = index;
-    slideTapState.startX = touch.clientX || 0;
-    slideTapState.startY = touch.clientY || 0;
-    slideTapState.moved = false;
-  }
-
-  function moveSlideTap(event) {
-    if (slideTapState.activeIndex === null) return;
-    const touch = (event.touches && event.touches[0]) || event;
-    if (!touch) return;
-    const dx = Math.abs((touch.clientX || 0) - slideTapState.startX);
-    const dy = Math.abs((touch.clientY || 0) - slideTapState.startY);
-    if (dx > 12 || dy > 12) {
-      slideTapState.moved = true;
-    }
-  }
-
-  function endSlideTap(index, event) {
-    const touch = (event.changedTouches && event.changedTouches[0]) || event;
-    if (!touch) return;
-    if (slideTapState.activeIndex !== index) return;
-    const dx = Math.abs((touch.clientX || 0) - slideTapState.startX);
-    const dy = Math.abs((touch.clientY || 0) - slideTapState.startY);
-    const moved = slideTapState.moved || dx > 12 || dy > 12;
-    slideTapState.activeIndex = null;
-    slideTapState.moved = false;
-    if (moved) return;
-    if (index !== currentCenteredIndex) return;
-    cycleLightbox(index);
-  }
-
   function cycleLightbox(index) {
     const product = PRODUCTS[index];
     const card = cards[index];
