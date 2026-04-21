@@ -3990,6 +3990,13 @@ body.is-booting #panelDesc {
            value === "sold out";
   }
 
+
+  function syncDetachedMobileCTANextFrame() {
+    requestAnimationFrame(() => {
+      syncDetachedMobileCTA();
+    });
+  }
+
   function syncDetachedMobileCTA() {
     const desktopBtn = document.getElementById("primaryActionBtn");
     const mobileBtn = document.getElementById("primaryActionBtnMobile");
@@ -4026,6 +4033,7 @@ body.is-booting #panelDesc {
     if (!validation.valid) {
       setPanelValidationMessage(validation.message);
       renderPanel(currentCenteredIndex);
+    syncDetachedMobileCTANextFrame();
       return;
     }
 
@@ -5372,8 +5380,6 @@ body.is-booting #panelDesc {
           }
         }
 
-        syncDetachedMobileCTA();
-
         if (panelPrice) {
           panelPrice.textContent = showPrice ? formatPrice(product) : "";
           panelPrice.style.display = "block";
@@ -5469,6 +5475,8 @@ body.is-booting #panelDesc {
           const isDisabledState = state === "not_for_sale" || state === "not for sale" || state === "archive_only" || state === "archive" || state === "sold_out" || state === "soldout";
           panelEl.classList.toggle("is-disabled-state", isDisabledState);
         }
+
+        syncDetachedMobileCTA();
       }, options);
     } finally {
       isRenderingPanel = false;
