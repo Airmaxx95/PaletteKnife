@@ -4411,6 +4411,73 @@ body.is-booting #panelDesc {
   // =========================================================
   // GENERATED MARKUP
   // =========================================================
+
+  function resolveInteractiveMediaTarget(event, card) {
+    const target = event && event.target;
+    if (!target) return null;
+
+    if (target.classList && target.classList.contains("media-item")) return target;
+
+    if (target.closest) {
+      const direct = target.closest(".media-item");
+      if (direct) return direct;
+
+      const wrap = target.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
+      if (wrap && wrap.querySelector) {
+        const nested = wrap.querySelector(".media-item");
+        if (nested) return nested;
+      }
+    }
+
+    if (card && card._els) {
+      const frameMedia = card._els.frame && card._els.frame.querySelector(".media-item");
+      if (frameMedia) return frameMedia;
+      const stageMedia = card._els.lightbox && card._els.lightbox.querySelector(".media-item");
+      if (stageMedia) return stageMedia;
+    }
+
+    return null;
+  }
+
+  function getEventClientPoint(event) {
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      return { x: event.clientX, y: event.clientY };
+    }
+
+    const touch =
+      (event && event.changedTouches && event.changedTouches[0]) ||
+      (event && event.touches && event.touches[0]);
+
+    if (touch && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+
+    return { x: 0, y: 0 };
+  }
+
+  function promoteSlideToActive(index) {
+    if (index === currentCenteredIndex) return;
+
+    currentCenteredIndex = index;
+    setPanelValidationMessage("");
+
+    const currentProduct = PRODUCTS[currentCenteredIndex];
+    if (currentProduct) {
+      renderPanel(currentCenteredIndex, { immediate: true });
+    }
+
+    if (navPanel && navPanel.classList.contains("is-open")) {
+      const hideNavForCurrent = currentProduct && (isMediaOnlyState(currentProduct.saleState) || isMediaNoButtonState(currentProduct.saleState));
+      if (hideNavForCurrent) {
+        setNavPanelOpen(false);
+      } else {
+        updateNavPanelMaxHeight();
+      }
+    }
+
+    renderSlideTitle();
+  }
+
   function pointHitsVisibleMediaPixels(mediaEl, clientX, clientY) {
     if (!mediaEl) return false;
 
@@ -4454,56 +4521,34 @@ body.is-booting #panelDesc {
     );
   }
 
-
-  function promoteClickedSlideToActive(index) {
-    if (index === currentCenteredIndex) return;
-
-    currentCenteredIndex = index;
-
-    const product = PRODUCTS[index];
-    if (product) {
-      renderPanel(index, { immediate: true });
-    }
-
-    renderSlideTitle();
-    renderAll();
-  }
-
   function handleVisibleMediaClick(index, event) {
     const card = cards[index];
     if (!card) return;
 
-    const target = event.target;
-    const isMedia = target && target.classList && target.classList.contains("media-item");
-    if (!isMedia) return;
+    const mediaEl = resolveInteractiveMediaTarget(event, card);
+    if (!mediaEl) return;
 
-    if (!pointHitsVisibleMediaPixels(target, event.clientX, event.clientY)) return;
+    const point = getEventClientPoint(event);
+    if (point.x && point.y && !pointHitsVisibleMediaPixels(mediaEl, point.x, point.y)) return;
 
-    promoteClickedSlideToActive(index);
+    promoteSlideToActive(index);
     cycleLightbox(index);
   }
 
   function updateVisibleMediaHoverCursor(index, event) {
     const card = cards[index];
-    if (!card || index !== currentCenteredIndex) return;
+    if (!card) return;
 
-    const target = event.target;
-    const isMedia = target && target.classList && target.classList.contains("media-item");
-    const hit = !!(isMedia && pointHitsVisibleMediaPixels(target, event.clientX, event.clientY));
+    const mediaEl = resolveInteractiveMediaTarget(event, card);
+    const point = getEventClientPoint(event);
+    const hit = !!(mediaEl && (!point.x || !point.y || pointHitsVisibleMediaPixels(mediaEl, point.x, point.y)));
 
     const mediaNodes = [];
-    if (card._els && card._els.frame) {
-      mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
-    }
-    if (card._els && card._els.lightbox) {
-      mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
-    }
+    if (card._els && card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
+    if (card._els && card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
 
     mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
-
-    if (hit && target.classList) {
-      target.classList.add("is-media-clickable-zone");
-    }
+    if (hit) mediaNodes.forEach((node) => node.classList.add("is-media-clickable-zone"));
   }
 
   function clearVisibleMediaHoverCursor(index) {
