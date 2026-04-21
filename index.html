@@ -3335,15 +3335,15 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v124 — restore mobile Collection button interaction
+   v126 — mobile Collection panel true cart-like fade
    Built on v122 baseline. Mobile only.
-   Keep Collection panel fade logic closer to Cart without blocking the toggle.
    ========================================================= */
 @media (max-width: 768px) {
   .nav-panel-inner {
-    overflow: hidden !important;
+    max-height: calc(var(--nav-open-max-height, 520px) - 34px) !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    overflow: hidden !important;
     transition: opacity 220ms ease !important;
   }
 
@@ -3357,13 +3357,18 @@ body.is-booting #panelDesc {
     opacity: 0 !important;
     pointer-events: none !important;
   }
+
+  .nav-grid {
+    max-height: calc(var(--nav-open-max-height, 520px) - 34px - 18px) !important;
+  }
 }
 
 @media (max-width: 480px) {
   .nav-panel-inner {
-    overflow: hidden !important;
+    max-height: calc(58vh - 66px) !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    overflow: hidden !important;
     transition: opacity 220ms ease !important;
   }
 
@@ -3377,46 +3382,9 @@ body.is-booting #panelDesc {
     opacity: 0 !important;
     pointer-events: none !important;
   }
-}
 
-
-/* =========================================================
-   v125 — mobile Collection panel fades like Cart while keeping toggle clickable
-   Built on v124 baseline. Mobile only.
-   ========================================================= */
-@media (max-width: 768px) {
-  .nav-panel-inner {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 220ms ease !important;
-  }
-
-  .nav-panel.is-open .nav-panel-inner {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-
-  .nav-panel.is-closing .nav-panel-inner {
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .nav-panel-inner {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 220ms ease !important;
-  }
-
-  .nav-panel.is-open .nav-panel-inner {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-
-  .nav-panel.is-closing .nav-panel-inner {
-    opacity: 0 !important;
-    pointer-events: none !important;
+  .nav-grid {
+    max-height: calc(58vh - 88px) !important;
   }
 }
 
@@ -5515,26 +5483,13 @@ body.is-booting #panelDesc {
     if (!navPanel) return;
     updateNavPanelMaxHeight();
 
-    if (isOpen) {
-      navPanel.classList.remove("is-closing");
-      navPanel.classList.add("is-open");
-      if (navPanelToggle) {
-        navPanelToggle.setAttribute("aria-expanded", "true");
-        navPanelToggle.textContent = "Close";
-      }
-      return;
-    }
+    navPanel.classList.toggle("is-open", isOpen);
+    navPanel.classList.remove("is-closing");
 
-    navPanel.classList.add("is-closing");
     if (navPanelToggle) {
-      navPanelToggle.setAttribute("aria-expanded", "false");
-      navPanelToggle.textContent = "Collection";
+      navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      navPanelToggle.textContent = isOpen ? "Close" : "Collection";
     }
-
-    window.setTimeout(() => {
-      navPanel.classList.remove("is-open");
-      navPanel.classList.remove("is-closing");
-    }, 220);
   }
 
   function goToSlideAbsolute(targetIndex) {
