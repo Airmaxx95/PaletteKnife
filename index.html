@@ -3333,6 +3333,31 @@ body.is-booting #panelDesc {
   pointer-events: none !important;
 }
 
+
+/* =========================================================
+   v123 — mobile variant buttons black text
+   Built on v122 baseline. Mobile only.
+   Fix Safari/Chrome mobile blue button text.
+   ========================================================= */
+@media (max-width: 768px) {
+  #panelVariantSection button,
+  #panelVariantSection .btn,
+  #panelVariantSection [role="button"],
+  #panelVariantSection input[type="button"],
+  #panelVariantSection input[type="submit"] {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+
+  #panelVariantSection button:visited,
+  #panelVariantSection button:active,
+  #panelVariantSection button:focus,
+  #panelVariantSection button:hover {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+}
+
 </style>
 
 
