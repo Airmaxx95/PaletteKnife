@@ -3335,8 +3335,7 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v108 — Safari lightbox diagnostic build
-   Built on approved v105 baseline.
+   v108b — Safari lightbox diagnostic build (fixed)
    ========================================================= */
 .debug-lightbox-hud {
   position: fixed;
@@ -3385,6 +3384,7 @@ body.is-booting #panelDesc {
 
 </head>
 <body class="is-booting">
+<div class="debug-lightbox-hud" id="debugLightboxHud">Lightbox debug ready…</div>
 
 <header class="site-header">
   <div class="header-inner">
@@ -4434,6 +4434,53 @@ body.is-booting #panelDesc {
   // =========================================================
   // GENERATED MARKUP
   // =========================================================
+
+  function getDebugLightboxHud() {
+    return document.getElementById("debugLightboxHud");
+  }
+
+  function setLightboxDebug(message) {
+    const hud = getDebugLightboxHud();
+    if (!hud) return;
+    hud.textContent = message;
+  }
+
+  function debugNodeLabel(node) {
+    if (!node) return "null";
+    const tag = node.tagName ? node.tagName.toLowerCase() : typeof node;
+    const id = node.id ? `#${node.id}` : "";
+    const cls = node.classList && node.classList.length ? "." + Array.from(node.classList).slice(0, 4).join(".") : "";
+    return `${tag}${id}${cls}`;
+  }
+
+  function getEventClientPoint(event) {
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      return { x: event.clientX, y: event.clientY };
+    }
+    const touch =
+      (event && event.changedTouches && event.changedTouches[0]) ||
+      (event && event.touches && event.touches[0]);
+    if (touch && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return { x: 0, y: 0 };
+  }
+
+  function resolveEventMediaNode(event) {
+    const target = event && event.target;
+    if (!target) return null;
+    if (target.classList && target.classList.contains("media-item")) return target;
+    if (target.closest) {
+      const direct = target.closest(".media-item");
+      if (direct) return direct;
+      const wrap = target.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
+      if (wrap && wrap.querySelector) {
+        return wrap.querySelector(".media-item");
+      }
+    }
+    return null;
+  }
+
   function pointHitsVisibleMediaPixels(mediaEl, clientX, clientY) {
     if (!mediaEl) return false;
 
@@ -4477,126 +4524,69 @@ body.is-booting #panelDesc {
     );
   }
 
-
-  const debugLightboxHud = document.getElementById("debugLightboxHud");
-
-  function debugNodeLabel(node) {
-    if (!node) return "null";
-    const tag = node.tagName ? node.tagName.toLowerCase() : typeof node;
-    const id = node.id ? `#${node.id}` : "";
-    const cls = node.classList && node.classList.length ? "." + Array.from(node.classList).slice(0, 4).join(".") : "";
-    return `${tag}${id}${cls}`;
-  }
-
-  function setLightboxDebug(message) {
-    if (!debugLightboxHud) return;
-    debugLightboxHud.textContent = message;
-  }
-
-  function resolveEventMediaNode(event) {
-    const target = event && event.target;
-    if (!target) return null;
-
-    if (target.classList && target.classList.contains("media-item")) {
-      return target;
-    }
-
-    if (target.closest) {
-      const direct = target.closest(".media-item");
-      if (direct) return direct;
-
-      const wrap = target.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
-      if (wrap && wrap.querySelector) {
-        const nested = wrap.querySelector(".media-item");
-        if (nested) return nested;
-      }
-    }
-
-    return null;
-  }
-
-  function getEventXY(event) {
-    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
-      return { x: event.clientX, y: event.clientY };
-    }
-    const touch = (event && event.changedTouches && event.changedTouches[0]) || (event && event.touches && event.touches[0]);
-    if (touch && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
-      return { x: touch.clientX, y: touch.clientY };
-    }
-    return { x: 0, y: 0 };
-  }
-
-  function describeCardState(index) {
-    const card = cards[index];
-    if (!card) return "no card";
-    const rect = card.getBoundingClientRect();
-    return `card[${index}] center?=${index === currentCenteredIndex} rect=${Math.round(rect.left)},${Math.round(rect.top)} ${Math.round(rect.width)}x${Math.round(rect.height)}`;
-  }
-
   function handleVisibleMediaClick(index, event) {
     const card = cards[index];
+    const pt = getEventClientPoint(event);
+    const target = event && event.target;
+    const mediaNode = resolveEventMediaNode(event);
+
+    setLightboxDebug(
+      `SURFACE HANDLER
+index=${index}
+currentCenteredIndex=${currentCenteredIndex}
+` +
+      `target=${debugNodeLabel(target)}
+media=${debugNodeLabel(mediaNode)}
+xy=${Math.round(pt.x)},${Math.round(pt.y)}`
+    );
+
     if (!card) {
-      setLightboxDebug(`CLICK FAIL
-reason=no-card
-index=${index}`);
+      setLightboxDebug(`BLOCKED no-card`);
       return;
     }
 
-    const target = event && event.target;
-    const mediaNode = resolveEventMediaNode(event);
-    const xy = getEventXY(event);
-    const targetLabel = debugNodeLabel(target);
-    const mediaLabel = debugNodeLabel(mediaNode);
-
     if (index !== currentCenteredIndex) {
       setLightboxDebug(
-        `CLICK BLOCKED
-reason=index-mismatch
-clicked=${index}
+        `BLOCKED index-mismatch
+index=${index}
 currentCenteredIndex=${currentCenteredIndex}
 ` +
-        `target=${targetLabel}
-media=${mediaLabel}
-${describeCardState(index)}`
+        `target=${debugNodeLabel(target)}`
       );
       return;
     }
 
     if (!mediaNode) {
       setLightboxDebug(
-        `CLICK BLOCKED
-reason=no-media-node
-clicked=${index}
+        `BLOCKED no-media-node
+index=${index}
 currentCenteredIndex=${currentCenteredIndex}
 ` +
-        `target=${targetLabel}
-xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+        `target=${debugNodeLabel(target)}`
       );
       return;
     }
 
-    if (xy.x && xy.y && !pointHitsVisibleMediaPixels(mediaNode, xy.x, xy.y)) {
+    if (pt.x && pt.y && !pointHitsVisibleMediaPixels(mediaNode, pt.x, pt.y)) {
       setLightboxDebug(
-        `CLICK BLOCKED
-reason=pixel-hit-failed
-clicked=${index}
+        `BLOCKED pixel-hit-failed
+index=${index}
 currentCenteredIndex=${currentCenteredIndex}
 ` +
-        `target=${targetLabel}
-media=${mediaLabel}
-xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+        `target=${debugNodeLabel(target)}
+media=${debugNodeLabel(mediaNode)}
+xy=${Math.round(pt.x)},${Math.round(pt.y)}`
       );
       return;
     }
 
     setLightboxDebug(
-      `CLICK PASS
-clicked=${index}
+      `PASS cycleLightbox
+index=${index}
 currentCenteredIndex=${currentCenteredIndex}
 ` +
-      `target=${targetLabel}
-media=${mediaLabel}
-xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+      `target=${debugNodeLabel(target)}
+media=${debugNodeLabel(mediaNode)}`
     );
     cycleLightbox(index);
   }
@@ -5774,10 +5764,6 @@ xy=${Math.round(xy.x)},${Math.round(xy.y)}`
       card.classList.add("is-lightbox-open");
     }
 
-    setLightboxDebug(`CYCLE RUN
-index=${index}
-from=${product.lightboxIndex}
-total=${total}`);
     const nextIndex = (product.lightboxIndex + 1) % total;
     product.lightboxIndex = nextIndex;
     swapLightboxMedia(index);
@@ -5940,6 +5926,22 @@ total=${total}`);
   // =========================================================
   // BOOT
   // =========================================================
+
+  document.addEventListener("click", (event) => {
+    const sceneHit = !!(event.target && event.target.closest && event.target.closest(".scene, .card, .media-frame, .lightbox-stage"));
+    if (sceneHit) {
+      setLightboxDebug(`DOC click\n target=${debugNodeLabel(event.target)}`);
+    }
+  }, true);
+
+  document.addEventListener("touchend", (event) => {
+    const t = event.target;
+    const sceneHit = !!(t && t.closest && t.closest(".scene, .card, .media-frame, .lightbox-stage"));
+    if (sceneHit) {
+      setLightboxDebug(`DOC touchend\n target=${debugNodeLabel(t)}`);
+    }
+  }, true);
+
   async function boot() {
     try {
       PRODUCTS = await loadProducts();
@@ -6251,9 +6253,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (el) el.textContent = '© ' + new Date().getFullYear();
 });
 </script>
-
-
-<div class="debug-lightbox-hud" id="debugLightboxHud">Lightbox debug ready…</div>
 
 </body>
 </html>
