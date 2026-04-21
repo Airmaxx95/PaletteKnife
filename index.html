@@ -3333,6 +3333,29 @@ body.is-booting #panelDesc {
   pointer-events: none !important;
 }
 
+
+/* =========================================================
+   v108 — Safari lightbox diagnostic build
+   Built on approved v105 baseline.
+   ========================================================= */
+.debug-lightbox-hud {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 9999;
+  min-width: 240px;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.86);
+  color: #fff;
+  font: 12px/1.35 Arial, sans-serif;
+  letter-spacing: 0.01em;
+  white-space: pre-wrap;
+  pointer-events: none;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
 </style>
 
 
@@ -4454,14 +4477,127 @@ body.is-booting #panelDesc {
     );
   }
 
-  function handleVisibleMediaClick(index, event) {
-    if (index !== currentCenteredIndex) return;
 
+  const debugLightboxHud = document.getElementById("debugLightboxHud");
+
+  function debugNodeLabel(node) {
+    if (!node) return "null";
+    const tag = node.tagName ? node.tagName.toLowerCase() : typeof node;
+    const id = node.id ? `#${node.id}` : "";
+    const cls = node.classList && node.classList.length ? "." + Array.from(node.classList).slice(0, 4).join(".") : "";
+    return `${tag}${id}${cls}`;
+  }
+
+  function setLightboxDebug(message) {
+    if (!debugLightboxHud) return;
+    debugLightboxHud.textContent = message;
+  }
+
+  function resolveEventMediaNode(event) {
     const target = event && event.target;
-    if (target && target.closest && target.closest(".panel, .nav-panel, .cart-drawer, .site-footer, .lightbox-controls, .lightbox-topbar, .btn, button, a, input, select, textarea")) {
+    if (!target) return null;
+
+    if (target.classList && target.classList.contains("media-item")) {
+      return target;
+    }
+
+    if (target.closest) {
+      const direct = target.closest(".media-item");
+      if (direct) return direct;
+
+      const wrap = target.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
+      if (wrap && wrap.querySelector) {
+        const nested = wrap.querySelector(".media-item");
+        if (nested) return nested;
+      }
+    }
+
+    return null;
+  }
+
+  function getEventXY(event) {
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      return { x: event.clientX, y: event.clientY };
+    }
+    const touch = (event && event.changedTouches && event.changedTouches[0]) || (event && event.touches && event.touches[0]);
+    if (touch && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return { x: 0, y: 0 };
+  }
+
+  function describeCardState(index) {
+    const card = cards[index];
+    if (!card) return "no card";
+    const rect = card.getBoundingClientRect();
+    return `card[${index}] center?=${index === currentCenteredIndex} rect=${Math.round(rect.left)},${Math.round(rect.top)} ${Math.round(rect.width)}x${Math.round(rect.height)}`;
+  }
+
+  function handleVisibleMediaClick(index, event) {
+    const card = cards[index];
+    if (!card) {
+      setLightboxDebug(`CLICK FAIL
+reason=no-card
+index=${index}`);
       return;
     }
 
+    const target = event && event.target;
+    const mediaNode = resolveEventMediaNode(event);
+    const xy = getEventXY(event);
+    const targetLabel = debugNodeLabel(target);
+    const mediaLabel = debugNodeLabel(mediaNode);
+
+    if (index !== currentCenteredIndex) {
+      setLightboxDebug(
+        `CLICK BLOCKED
+reason=index-mismatch
+clicked=${index}
+currentCenteredIndex=${currentCenteredIndex}
+` +
+        `target=${targetLabel}
+media=${mediaLabel}
+${describeCardState(index)}`
+      );
+      return;
+    }
+
+    if (!mediaNode) {
+      setLightboxDebug(
+        `CLICK BLOCKED
+reason=no-media-node
+clicked=${index}
+currentCenteredIndex=${currentCenteredIndex}
+` +
+        `target=${targetLabel}
+xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+      );
+      return;
+    }
+
+    if (xy.x && xy.y && !pointHitsVisibleMediaPixels(mediaNode, xy.x, xy.y)) {
+      setLightboxDebug(
+        `CLICK BLOCKED
+reason=pixel-hit-failed
+clicked=${index}
+currentCenteredIndex=${currentCenteredIndex}
+` +
+        `target=${targetLabel}
+media=${mediaLabel}
+xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+      );
+      return;
+    }
+
+    setLightboxDebug(
+      `CLICK PASS
+clicked=${index}
+currentCenteredIndex=${currentCenteredIndex}
+` +
+      `target=${targetLabel}
+media=${mediaLabel}
+xy=${Math.round(xy.x)},${Math.round(xy.y)}`
+    );
     cycleLightbox(index);
   }
 
@@ -4469,15 +4605,23 @@ body.is-booting #panelDesc {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
 
-    const target = event && event.target;
-    const hit = !!(target && target.closest && target.closest(".card, .media-frame, .lightbox-stage, .media-item, .video-loading-shell, .video-loading-overlay, .video-loading-panel"));
+    const target = event.target;
+    const isMedia = target && target.classList && target.classList.contains("media-item");
+    const hit = !!(isMedia && pointHitsVisibleMediaPixels(target, event.clientX, event.clientY));
 
     const mediaNodes = [];
-    if (card._els && card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
-    if (card._els && card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
+    if (card._els && card._els.frame) {
+      mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
+    }
+    if (card._els && card._els.lightbox) {
+      mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
+    }
 
     mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
-    if (hit) mediaNodes.forEach((node) => node.classList.add("is-media-clickable-zone"));
+
+    if (hit && target.classList) {
+      target.classList.add("is-media-clickable-zone");
+    }
   }
 
   function clearVisibleMediaHoverCursor(index) {
@@ -4621,10 +4765,14 @@ body.is-booting #panelDesc {
       card.append(frame, lightbox, fade);
       card._fade = fade;
 
-      card.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
-      card.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
-      card.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
-      card.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
+      frame.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
+      lightbox.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
+      frame.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
+      lightbox.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
+      frame.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
+      lightbox.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
+      frame.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
+      lightbox.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
 
       card._els = {
         frame,
@@ -5626,6 +5774,10 @@ body.is-booting #panelDesc {
       card.classList.add("is-lightbox-open");
     }
 
+    setLightboxDebug(`CYCLE RUN
+index=${index}
+from=${product.lightboxIndex}
+total=${total}`);
     const nextIndex = (product.lightboxIndex + 1) % total;
     product.lightboxIndex = nextIndex;
     swapLightboxMedia(index);
@@ -6099,6 +6251,9 @@ document.addEventListener('DOMContentLoaded', function () {
   if (el) el.textContent = '© ' + new Date().getFullYear();
 });
 </script>
+
+
+<div class="debug-lightbox-hud" id="debugLightboxHud">Lightbox debug ready…</div>
 
 </body>
 </html>
