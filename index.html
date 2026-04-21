@@ -5290,7 +5290,11 @@ body.is-booting #panelDesc {
     const raw = String(text || "").trim();
     if (!raw) return "";
 
-    const normalized = raw.replace(/\r\n?/g, "\n");
+    const normalized = raw
+      .replace(/\r\n?/g, "\n")
+      .replace(/^(?:\s*)(?:â€¢|â—¦|â–ª|Â·|Ã¢â‚¬Â¢|Ã‚Â·|á)\s*/gm, "• ")
+      .replace(/\s(?:â€¢|â—¦|â–ª|Â·|Ã¢â‚¬Â¢|Ã‚Â·)\s/g, " • ");
+
     const lines = normalized
       .split("\n")
       .map(line => line.trim())
@@ -5298,7 +5302,8 @@ body.is-booting #panelDesc {
 
     const hasExplicitBullets =
       /[•●◦▪‣⁃∙·\uFFFD]/.test(normalized) ||
-      lines.some(line => /^(?:[-*])\s+/.test(line));
+      lines.some(line => /^(?:[-*])\s+/.test(line)) ||
+      lines.some(line => /^á\s+/.test(line));
 
     if (!hasExplicitBullets) {
       return escapeHtml(normalized).replace(/\n/g, "<br>");
@@ -5313,15 +5318,15 @@ body.is-booting #panelDesc {
         return;
       }
 
-      if (/^[•●◦▪‣⁃∙·\uFFFD]\s*/.test(line)) {
-        const cleaned = line.replace(/^[•●◦▪‣⁃∙·\uFFFD]\s*/, "").trim();
+      if (/^(?:[•●◦▪‣⁃∙·\uFFFD]|á)\s*/.test(line)) {
+        const cleaned = line.replace(/^(?:[•●◦▪‣⁃∙·\uFFFD]|á)\s*/, "").trim();
         if (cleaned) bulletParts.push(cleaned);
         return;
       }
 
-      if (/[•●◦▪‣⁃∙·\uFFFD]/.test(line)) {
+      if (/(?:[•●◦▪‣⁃∙·\uFFFD]|â€¢|â—¦|â–ª|Â·|Ã¢â‚¬Â¢|Ã‚Â·)/.test(line)) {
         line
-          .split(/[•●◦▪‣⁃∙·\uFFFD]+/)
+          .split(/(?:[•●◦▪‣⁃∙·\uFFFD]|â€¢|â—¦|â–ª|Â·|Ã¢â‚¬Â¢|Ã‚Â·)+/)
           .map(part => part.trim())
           .filter(Boolean)
           .forEach(part => bulletParts.push(part));
