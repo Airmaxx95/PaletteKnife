@@ -3360,24 +3360,14 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v124b — mobile CTA true desktop greyed state
+   v124c — mobile CTA sale-state root fix
    Built on v123 baseline. Mobile only.
-   Force detached CTA to inherit desktop disabled/greyed presentation
-   for soldout / archive / notforsale states.
+   Detached CTA gets explicit disabled greyed styling for
+   not for sale / archive / sold out states, instead of relying on panel wrapper styles.
    ========================================================= */
 @media (max-width: 768px) {
-  .panel-actions-mobile-detached .action-primary.is-disabled-state,
-  .panel-actions-mobile-detached .action-primary.is-disabled-state:disabled,
-  .panel-actions-mobile-detached .action-primary.is-out-of-stock,
-  .panel-actions-mobile-detached .action-primary.is-out-of-stock:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="soldout"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="soldout"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="archive"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="archive"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="notforsale"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="notforsale"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="not_for_sale"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="not_for_sale"]:disabled {
+  .panel-actions-mobile-detached .action-primary.is-mobile-greyed-sale-state,
+  .panel-actions-mobile-detached .action-primary.is-mobile-greyed-sale-state:disabled {
     background: rgba(255,255,255,0.18) !important;
     color: rgba(255,255,255,0.95) !important;
     -webkit-text-fill-color: rgba(255,255,255,0.95) !important;
@@ -3388,26 +3378,11 @@ body.is-booting #panelDesc {
     cursor: default !important;
     pointer-events: none !important;
   }
-
-  .panel-actions-mobile-detached .action-primary.is-disabled-state *,
-  .panel-actions-mobile-detached .action-primary.is-out-of-stock * {
-    pointer-events: none !important;
-  }
 }
 
 @media (max-width: 480px) {
-  .panel-actions-mobile-detached .action-primary.is-disabled-state,
-  .panel-actions-mobile-detached .action-primary.is-disabled-state:disabled,
-  .panel-actions-mobile-detached .action-primary.is-out-of-stock,
-  .panel-actions-mobile-detached .action-primary.is-out-of-stock:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="soldout"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="soldout"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="archive"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="archive"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="notforsale"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="notforsale"]:disabled,
-  .panel-actions-mobile-detached .action-primary[data-sale-state="not_for_sale"],
-  .panel-actions-mobile-detached .action-primary[data-sale-state="not_for_sale"]:disabled {
+  .panel-actions-mobile-detached .action-primary.is-mobile-greyed-sale-state,
+  .panel-actions-mobile-detached .action-primary.is-mobile-greyed-sale-state:disabled {
     background: rgba(255,255,255,0.18) !important;
     color: rgba(255,255,255,0.95) !important;
     -webkit-text-fill-color: rgba(255,255,255,0.95) !important;
@@ -4003,14 +3978,39 @@ body.is-booting #panelDesc {
     return { valid: true, message: "", stock };
   }
 
+
+  function isGreyedSaleState(state) {
+    const value = String(state || "").toLowerCase().trim();
+    return value === "not_for_sale" ||
+           value === "not for sale" ||
+           value === "archive_only" ||
+           value === "archive" ||
+           value === "sold_out" ||
+           value === "soldout" ||
+           value === "sold out";
+  }
+
   function syncDetachedMobileCTA() {
     const desktopBtn = document.getElementById("primaryActionBtn");
     const mobileBtn = document.getElementById("primaryActionBtnMobile");
+    const product = PRODUCTS[currentCenteredIndex];
     if (!desktopBtn || !mobileBtn) return;
 
     mobileBtn.textContent = desktopBtn.textContent;
     mobileBtn.disabled = desktopBtn.disabled;
     mobileBtn.className = desktopBtn.className;
+
+    const saleState = String(product && product.saleState || "").toLowerCase().trim();
+    mobileBtn.dataset.saleState = saleState;
+
+    const greyed = isGreyedSaleState(saleState);
+    mobileBtn.classList.toggle("is-mobile-greyed-sale-state", greyed);
+
+    if (greyed) {
+      mobileBtn.disabled = true;
+      mobileBtn.classList.remove("is-added");
+      mobileBtn.classList.remove("is-out-of-stock");
+    }
   }
 
   function addCurrentProductToCart() {
@@ -5079,23 +5079,6 @@ body.is-booting #panelDesc {
   let isRenderingPanel = false;
   let pendingPanelRender = null;
   let panelValidationMessageOverride = "";
-
-
-  function syncMobilePrimaryActionState(product, isDisabled) {
-    if (!primaryActionBtnMobile || !product) return;
-    const saleState = String(product.saleState || "").toLowerCase();
-    primaryActionBtnMobile.dataset.saleState = saleState;
-
-    const shouldGrey =
-      isDisabled ||
-      saleState === "soldout" ||
-      saleState === "archive" ||
-      saleState === "notforsale" ||
-      saleState === "not_for_sale";
-
-    primaryActionBtnMobile.classList.toggle("is-disabled-state", shouldGrey);
-    primaryActionBtnMobile.classList.toggle("is-out-of-stock", shouldGrey);
-  }
 
   function setPanelValidationMessage(message) {
     panelValidationMessageOverride = String(message || "").replace(/\.$/, "");
