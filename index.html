@@ -3471,6 +3471,15 @@ body.is-booting #panelDesc {
     nearScale: 3.4
   };
 
+  function getTouchSwipeStrength() {
+    return window.innerWidth <= 900 ? 0.95 : 0.28;
+  }
+
+  function getTouchDirectVelocityBoost() {
+    return window.innerWidth <= 900 ? 0.16 : 0;
+  }
+
+
   function applyResponsiveSpacing() {
     if (window.innerWidth <= 768) {
       CONFIG.slideSpacing = 1400;
@@ -4537,7 +4546,31 @@ body.is-booting #panelDesc {
     );
   }
 
+
+  let lastLightboxTouchEndAt = 0;
+  let lastLightboxHandledAt = 0;
+
+  function isSyntheticClickAfterTouch(event) {
+    if (!event || event.type !== "click") return false;
+    const now = Date.now();
+    return (now - lastLightboxTouchEndAt) < 500;
+  }
+
+  function shouldSkipDuplicateLightboxEvent() {
+    const now = Date.now();
+    if ((now - lastLightboxHandledAt) < 280) return true;
+    lastLightboxHandledAt = now;
+    return false;
+  }
+
   function handleVisibleMediaClick(index, event) {
+    if (event && event.type === "touchend") {
+      lastLightboxTouchEndAt = Date.now();
+    }
+
+    if (isSyntheticClickAfterTouch(event)) return;
+    if (shouldSkipDuplicateLightboxEvent()) return;
+
     const target = event && event.target;
     if (isIgnoredUiTarget(target)) return;
 
@@ -5938,7 +5971,15 @@ body.is-booting #panelDesc {
     lastX = x;
     returningToStart = false;
     anchorTarget = null;
-    targetVelocity += dy * 0.28;
+
+    const touchStrength = getTouchSwipeStrength();
+    const directBoost = getTouchDirectVelocityBoost();
+
+    targetVelocity += dy * touchStrength;
+    if (directBoost) {
+      velocity += dy * directBoost;
+    }
+
     start();
   }, { passive: true });
 
