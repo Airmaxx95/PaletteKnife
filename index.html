@@ -4603,13 +4603,15 @@ body.is-booting #panelDesc {
       video.src = media.src;
       video.dataset.kind = "video";
       video.playsInline = true;
-      video.preload = "metadata";
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.preload = autoplay ? "auto" : "metadata";
       video.muted = muted;
+      video.defaultMuted = muted;
       video.loop = loop;
       video.controls = false;
-      if (autoplay) {
-        video.autoplay = true;
-      }
+      video.autoplay = !!autoplay;
+      video.setAttribute("muted", "");
 
       const overlay = document.createElement("div");
       overlay.className = "video-loading-overlay";
@@ -4619,15 +4621,71 @@ body.is-booting #panelDesc {
       panel.textContent = "Loading";
       overlay.appendChild(panel);
 
+      let loadingCleared = false;
+      let fallbackTimer = null;
+
       const clearLoading = () => {
+        if (loadingCleared) return;
+        loadingCleared = true;
         shell.classList.remove("is-loading");
+        if (fallbackTimer) {
+          window.clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
       };
 
-      video.addEventListener("loadeddata", clearLoading, { once: true });
-      video.addEventListener("canplay", clearLoading, { once: true });
+      const attemptPlay = () => {
+        if (!autoplay) return;
+        try {
+          const maybePromise = video.play();
+          if (maybePromise && typeof maybePromise.then === "function") {
+            maybePromise.then(() => {
+              clearLoading();
+            }).catch(() => {
+              // Keep fallback alive; Safari may still load metadata without autoplay promise resolving.
+            });
+          }
+        } catch (error) {
+          // Ignore and allow fallback/event-driven readiness.
+        }
+      };
+
+      ["loadedmetadata", "loadeddata", "canplay", "canplaythrough", "playing"].forEach((eventName) => {
+        video.addEventListener(eventName, () => {
+          clearLoading();
+        }, { once: true });
+      });
+
+      ["stalled", "suspend"].forEach((eventName) => {
+        video.addEventListener(eventName, () => {
+          if (video.readyState >= 1) {
+            clearLoading();
+          }
+        });
+      });
+
       video.addEventListener("error", clearLoading, { once: true });
 
+      fallbackTimer = window.setTimeout(() => {
+        if (video.readyState >= 1) {
+          clearLoading();
+        }
+      }, 1800);
+
       shell.append(video, overlay);
+
+      try {
+        video.load();
+      } catch (error) {
+        // Ignore.
+      }
+
+      if (autoplay) {
+        requestAnimationFrame(() => {
+          attemptPlay();
+        });
+      }
+
       return shell;
     }
 
