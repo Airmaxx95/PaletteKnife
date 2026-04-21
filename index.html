@@ -4412,33 +4412,6 @@ body.is-booting #panelDesc {
   // GENERATED MARKUP
   // =========================================================
 
-  function resolveInteractiveMediaTarget(event, card) {
-    const target = event && event.target;
-    if (!target) return null;
-
-    if (target.classList && target.classList.contains("media-item")) return target;
-
-    if (target.closest) {
-      const direct = target.closest(".media-item");
-      if (direct) return direct;
-
-      const wrap = target.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
-      if (wrap && wrap.querySelector) {
-        const nested = wrap.querySelector(".media-item");
-        if (nested) return nested;
-      }
-    }
-
-    if (card && card._els) {
-      const frameMedia = card._els.frame && card._els.frame.querySelector(".media-item");
-      if (frameMedia) return frameMedia;
-      const stageMedia = card._els.lightbox && card._els.lightbox.querySelector(".media-item");
-      if (stageMedia) return stageMedia;
-    }
-
-    return null;
-  }
-
   function getEventClientPoint(event) {
     if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
       return { x: event.clientX, y: event.clientY };
@@ -4455,27 +4428,70 @@ body.is-booting #panelDesc {
     return { x: 0, y: 0 };
   }
 
-  function promoteSlideToActive(index) {
-    if (index === currentCenteredIndex) return;
+  function resolveMediaNodeForCard(card) {
+    if (!card || !card._els) return null;
 
-    currentCenteredIndex = index;
-    setPanelValidationMessage("");
+    const frameMedia = card._els.frame && card._els.frame.querySelector(".media-item");
+    if (frameMedia) return frameMedia;
 
-    const currentProduct = PRODUCTS[currentCenteredIndex];
-    if (currentProduct) {
-      renderPanel(currentCenteredIndex, { immediate: true });
-    }
+    const lightboxMedia = card._els.lightbox && card._els.lightbox.querySelector(".media-item");
+    if (lightboxMedia) return lightboxMedia;
 
-    if (navPanel && navPanel.classList.contains("is-open")) {
-      const hideNavForCurrent = currentProduct && (isMediaOnlyState(currentProduct.saleState) || isMediaNoButtonState(currentProduct.saleState));
-      if (hideNavForCurrent) {
-        setNavPanelOpen(false);
-      } else {
-        updateNavPanelMaxHeight();
-      }
-    }
+    return null;
+  }
 
-    renderSlideTitle();
+  function getVisuallyDominantCardIndexAtPoint(clientX, clientY) {
+    const candidates = [];
+
+    cards.forEach((card, index) => {
+      if (!card) return;
+
+      const rect = card.getBoundingClientRect();
+      const containsPoint =
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+
+      if (!containsPoint) return;
+
+      const style = window.getComputedStyle(card);
+      const opacity = parseFloat(style.opacity || "0") || 0;
+      if (opacity <= 0.02) return;
+
+      const mediaEl = resolveMediaNodeForCard(card);
+      if (!mediaEl) return;
+
+      if (!pointHitsVisibleMediaPixels(mediaEl, clientX, clientY)) return;
+
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      const centerDistance = Math.sqrt(dx * dx + dy * dy);
+
+      candidates.push({
+        index,
+        opacity,
+        centerDistance
+      });
+    });
+
+    if (!candidates.length) return null;
+
+    candidates.sort((a, b) => {
+      if (Math.abs(b.opacity - a.opacity) > 0.001) return b.opacity - a.opacity;
+      return a.centerDistance - b.centerDistance;
+    });
+
+    return candidates[0].index;
+  }
+
+  function isIgnoredUiTarget(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest(
+      ".panel, .nav-panel, .cart-drawer, .site-footer, .lightbox-controls, .lightbox-topbar, .btn, button, a, input, select, textarea"
+    );
   }
 
   function pointHitsVisibleMediaPixels(mediaEl, clientX, clientY) {
@@ -4522,33 +4538,47 @@ body.is-booting #panelDesc {
   }
 
   function handleVisibleMediaClick(index, event) {
-    const card = cards[index];
-    if (!card) return;
-
-    const mediaEl = resolveInteractiveMediaTarget(event, card);
-    if (!mediaEl) return;
+    const target = event && event.target;
+    if (isIgnoredUiTarget(target)) return;
 
     const point = getEventClientPoint(event);
-    if (point.x && point.y && !pointHitsVisibleMediaPixels(mediaEl, point.x, point.y)) return;
+    if (!point.x || !point.y) return;
 
-    promoteSlideToActive(index);
-    cycleLightbox(index);
+    const dominantIndex = getVisuallyDominantCardIndexAtPoint(point.x, point.y);
+    if (dominantIndex === null) return;
+
+    if (event && event.preventDefault) event.preventDefault();
+    if (event && event.stopPropagation) event.stopPropagation();
+
+    velocity = 0;
+    targetVelocity = 0;
+    returningToStart = false;
+    anchorTarget = null;
+
+    cycleLightbox(dominantIndex);
   }
 
   function updateVisibleMediaHoverCursor(index, event) {
-    const card = cards[index];
-    if (!card) return;
-
-    const mediaEl = resolveInteractiveMediaTarget(event, card);
     const point = getEventClientPoint(event);
-    const hit = !!(mediaEl && (!point.x || !point.y || pointHitsVisibleMediaPixels(mediaEl, point.x, point.y)));
+    const dominantIndex = (point.x && point.y) ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
+
+    cards.forEach((card) => {
+      if (!card || !card._els) return;
+      const mediaNodes = [];
+      if (card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
+      if (card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
+      mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
+    });
+
+    if (dominantIndex === null) return;
+
+    const card = cards[dominantIndex];
+    if (!card || !card._els) return;
 
     const mediaNodes = [];
-    if (card._els && card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
-    if (card._els && card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
-
-    mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
-    if (hit) mediaNodes.forEach((node) => node.classList.add("is-media-clickable-zone"));
+    if (card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
+    if (card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
+    mediaNodes.forEach((node) => node.classList.add("is-media-clickable-zone"));
   }
 
   function clearVisibleMediaHoverCursor(index) {
@@ -4694,8 +4724,8 @@ body.is-booting #panelDesc {
 
       frame.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
       lightbox.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
-      frame.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
-      lightbox.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
+      frame.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: false });
+      lightbox.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: false });
       frame.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       lightbox.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       frame.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
