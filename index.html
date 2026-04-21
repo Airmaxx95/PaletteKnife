@@ -3335,9 +3335,9 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v129 — mobile Collection inline opacity fade
+   v130 — mobile Collection forced JS fade
    Built on v122 baseline. Mobile only.
-   Forces nav-panel-inner to behave like cart body via opacity animation.
+   Freeze nav shell so only inner body animates like cart.
    ========================================================= */
 @media (max-width: 768px) {
   .nav-panel {
@@ -3359,10 +3359,6 @@ body.is-booting #panelDesc {
     width: min(320px, calc(100vw - 20px)) !important;
     max-height: calc(62vh - 70px) !important;
     overflow: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 220ms ease !important;
-    will-change: opacity !important;
   }
 
   .nav-grid {
@@ -3390,10 +3386,6 @@ body.is-booting #panelDesc {
     width: min(320px, calc(100vw - 16px)) !important;
     max-height: calc(58vh - 66px) !important;
     overflow: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 220ms ease !important;
-    will-change: opacity !important;
   }
 
   .nav-grid {
@@ -5493,8 +5485,21 @@ body.is-booting #panelDesc {
   }
 
 
+  function isMobileCollectionFadeViewport() {
+    return window.innerWidth <= 768;
+  }
+
   function getNavPanelInner() {
     return navPanel ? navPanel.querySelector(".nav-panel-inner") : null;
+  }
+
+  function stopNavPanelAnimations(navInner) {
+    if (!navInner || !navInner.getAnimations) return;
+    try {
+      navInner.getAnimations().forEach((animation) => animation.cancel());
+    } catch (error) {
+      // ignore
+    }
   }
 
   function setNavPanelOpen(isOpen) {
@@ -5503,19 +5508,37 @@ body.is-booting #panelDesc {
 
     const navInner = getNavPanelInner();
 
+    if (!isMobileCollectionFadeViewport() || !navInner) {
+      navPanel.classList.toggle("is-open", isOpen);
+      navPanel.classList.remove("is-closing");
+
+      if (navPanelToggle) {
+        navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        navPanelToggle.textContent = isOpen ? "Close" : "Collection";
+      }
+      return;
+    }
+
+    stopNavPanelAnimations(navInner);
+
     if (isOpen) {
       navPanel.classList.remove("is-closing");
       navPanel.classList.add("is-open");
 
-      if (navInner) {
-        navInner.style.pointerEvents = "none";
-        navInner.style.opacity = "0";
-        void navInner.offsetHeight;
-        requestAnimationFrame(() => {
-          navInner.style.opacity = "1";
-          navInner.style.pointerEvents = "auto";
-        });
-      }
+      navInner.style.opacity = "0";
+      navInner.style.pointerEvents = "none";
+
+      void navInner.offsetHeight;
+
+      const anim = navInner.animate(
+        [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 220, easing: "ease", fill: "forwards" }
+      );
+
+      anim.onfinish = () => {
+        navInner.style.opacity = "1";
+        navInner.style.pointerEvents = "auto";
+      };
 
       if (navPanelToggle) {
         navPanelToggle.setAttribute("aria-expanded", "true");
@@ -5525,25 +5548,25 @@ body.is-booting #panelDesc {
     }
 
     navPanel.classList.add("is-closing");
+    navInner.style.pointerEvents = "none";
+    navInner.style.opacity = "1";
 
-    if (navInner) {
-      navInner.style.pointerEvents = "none";
+    const anim = navInner.animate(
+      [{ opacity: 1 }, { opacity: 0 }],
+      { duration: 220, easing: "ease", fill: "forwards" }
+    );
+
+    anim.onfinish = () => {
       navInner.style.opacity = "0";
-    }
+      navInner.style.pointerEvents = "none";
+      navPanel.classList.remove("is-open");
+      navPanel.classList.remove("is-closing");
+    };
 
     if (navPanelToggle) {
       navPanelToggle.setAttribute("aria-expanded", "false");
       navPanelToggle.textContent = "Collection";
     }
-
-    window.setTimeout(() => {
-      navPanel.classList.remove("is-open");
-      navPanel.classList.remove("is-closing");
-      if (navInner) {
-        navInner.style.opacity = "";
-        navInner.style.pointerEvents = "";
-      }
-    }, 220);
   }
 
   function goToSlideAbsolute(targetIndex) {
