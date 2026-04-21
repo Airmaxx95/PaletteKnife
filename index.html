@@ -6111,6 +6111,7 @@ body.is-booting #panelDesc {
     returningToStart = false;
     anchorTarget = null;
     targetVelocity += dy * getTouchMoveStrength();
+    scheduleIdleAutoSettle();
     start();
   }, { passive: true });
 
@@ -6119,7 +6120,10 @@ body.is-booting #panelDesc {
       velocity += touchGestureLastDy * getTouchReleaseBoost();
       targetVelocity += touchGestureTotalDy * 0.118;
       markRecentTouchScroll();
+      scheduleIdleAutoSettle();
       start();
+    } else {
+      scheduleIdleAutoSettle();
     }
 
     lastY = null;
