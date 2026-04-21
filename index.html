@@ -4454,16 +4454,79 @@ body.is-booting #panelDesc {
     );
   }
 
+  let lastLightboxMediaTriggerAt = 0;
+
+  function getEventClientPoint(event) {
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      return { x: event.clientX, y: event.clientY };
+    }
+
+    const touch =
+      (event && event.changedTouches && event.changedTouches[0]) ||
+      (event && event.touches && event.touches[0]);
+
+    if (touch && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+
+    const target = event && event.target && event.target.getBoundingClientRect
+      ? event.target
+      : null;
+
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      return {
+        x: rect.left + (rect.width / 2),
+        y: rect.top + (rect.height / 2)
+      };
+    }
+
+    return { x: 0, y: 0 };
+  }
+
+  function resolveEventMediaNode(event) {
+    const rawTarget = event && event.target;
+    if (!rawTarget || !rawTarget.closest) return null;
+
+    const directMedia = rawTarget.closest(".media-item");
+    if (directMedia) return directMedia;
+
+    const loadingShell = rawTarget.closest(".video-loading-shell");
+    if (loadingShell) {
+      const nestedMedia = loadingShell.querySelector(".media-item");
+      if (nestedMedia) return nestedMedia;
+    }
+
+    const transitionWrap = rawTarget.closest(".lightbox-transition-media");
+    if (transitionWrap) {
+      const nestedMedia = transitionWrap.querySelector(".media-item");
+      if (nestedMedia) return nestedMedia;
+    }
+
+    const frameOrStage = rawTarget.closest(".media-frame, .lightbox-stage");
+    if (frameOrStage) {
+      return frameOrStage.querySelector(".media-item");
+    }
+
+    return null;
+  }
+
   function handleVisibleMediaClick(index, event) {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
 
-    const target = event.target;
-    const isMedia = target && target.classList && target.classList.contains("media-item");
-    if (!isMedia) return;
+    const now = Date.now();
+    if ((event.type === "click" || event.type === "pointerup") && now - lastLightboxMediaTriggerAt < 250) {
+      return;
+    }
 
-    if (!pointHitsVisibleMediaPixels(target, event.clientX, event.clientY)) return;
+    const mediaNode = resolveEventMediaNode(event);
+    if (!mediaNode) return;
 
+    const point = getEventClientPoint(event);
+    if (!pointHitsVisibleMediaPixels(mediaNode, point.x, point.y)) return;
+
+    lastLightboxMediaTriggerAt = now;
     cycleLightbox(index);
   }
 
@@ -4471,9 +4534,9 @@ body.is-booting #panelDesc {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
 
-    const target = event.target;
-    const isMedia = target && target.classList && target.classList.contains("media-item");
-    const hit = !!(isMedia && pointHitsVisibleMediaPixels(target, event.clientX, event.clientY));
+    const mediaNode = resolveEventMediaNode(event);
+    const point = getEventClientPoint(event);
+    const hit = !!(mediaNode && pointHitsVisibleMediaPixels(mediaNode, point.x, point.y));
 
     const mediaNodes = [];
     if (card._els && card._els.frame) {
@@ -4485,8 +4548,8 @@ body.is-booting #panelDesc {
 
     mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
 
-    if (hit && target.classList) {
-      target.classList.add("is-media-clickable-zone");
+    if (hit && mediaNode.classList) {
+      mediaNode.classList.add("is-media-clickable-zone");
     }
   }
 
@@ -4633,6 +4696,10 @@ body.is-booting #panelDesc {
 
       frame.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
       lightbox.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
+      frame.addEventListener("pointerup", (event) => handleVisibleMediaClick(index, event));
+      lightbox.addEventListener("pointerup", (event) => handleVisibleMediaClick(index, event));
+      frame.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
+      lightbox.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
       frame.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       lightbox.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
       frame.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
