@@ -3433,6 +3433,21 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v128 — header load center fix
+   Built on v127 baseline.
+   Prevent Safari/WebKit visible header recenter snap by hiding
+   the header until the logo image has loaded.
+   ========================================================= */
+.site-header {
+  visibility: hidden;
+}
+
+.site-header.is-ready {
+  visibility: visible;
+}
+
 </style>
 
 
@@ -3465,7 +3480,7 @@ body.is-booting #panelDesc {
 
 <header class="site-header">
   <div class="header-inner">
-    <div class="logo"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg"></div>
+    <div class="logo"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></div>
   </div>
 </header>
 
@@ -3630,6 +3645,26 @@ body.is-booting #panelDesc {
   const errorState = document.getElementById("errorState");
   const primaryActionBtn = document.getElementById("primaryActionBtn");
   const slideTitleDisplay = document.getElementById("slideTitleDisplay");
+  const siteHeader = document.querySelector(".site-header");
+  const siteHeaderLogo = document.getElementById("siteHeaderLogo");
+
+  function markHeaderReady() {
+    if (siteHeader) {
+      siteHeader.classList.add("is-ready");
+    }
+  }
+
+  if (siteHeaderLogo) {
+    if (siteHeaderLogo.complete) {
+      markHeaderReady();
+    } else {
+      siteHeaderLogo.addEventListener("load", markHeaderReady, { once: true });
+      siteHeaderLogo.addEventListener("error", markHeaderReady, { once: true });
+    }
+  } else {
+    markHeaderReady();
+  }
+
   const navPanel = document.getElementById("navPanel");
   const navPanelToggle = document.getElementById("navPanelToggle");
   const navGrid = document.getElementById("navGrid");
