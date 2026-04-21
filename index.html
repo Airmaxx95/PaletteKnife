@@ -4454,36 +4454,13 @@ body.is-booting #panelDesc {
     );
   }
 
-  
-  function resolveInteractiveMediaTarget(event, card) {
-    const t = event && event.target;
-    if (t && t.classList && t.classList.contains("media-item")) return t;
-    if (t && t.closest) {
-      const found = t.closest(".media-item");
-      if (found) return found;
-      const wrap = t.closest(".media-frame, .lightbox-stage, .video-loading-shell, .lightbox-transition-media");
-      if (wrap && wrap.querySelector) {
-        const nested = wrap.querySelector(".media-item");
-        if (nested) return nested;
-      }
+  function handleVisibleMediaClick(index, event) {
+    if (index !== currentCenteredIndex) return;
+
+    const target = event && event.target;
+    if (target && target.closest && target.closest(".panel, .nav-panel, .cart-drawer, .site-footer, .lightbox-controls, .lightbox-topbar, .btn, button, a, input, select, textarea")) {
+      return;
     }
-    if (card && card._els) {
-      return card._els.frame.querySelector(".media-item") || card._els.lightbox.querySelector(".media-item");
-    }
-    return null;
-  }
-
-function handleVisibleMediaClick(index, event) {
-    const card = cards[index];
-    if (!card || index !== currentCenteredIndex) return;
-
-    const mediaEl = resolveInteractiveMediaTarget(event, card);
-    if (!mediaEl) return;
-
-    const x = (event.clientX ?? (event.changedTouches && event.changedTouches[0] && event.changedTouches[0].clientX) ?? 0);
-    const y = (event.clientY ?? (event.changedTouches && event.changedTouches[0] && event.changedTouches[0].clientY) ?? 0);
-
-    if (x && y && !pointHitsVisibleMediaPixels(mediaEl, x, y)) return;
 
     cycleLightbox(index);
   }
@@ -4492,10 +4469,8 @@ function handleVisibleMediaClick(index, event) {
     const card = cards[index];
     if (!card || index !== currentCenteredIndex) return;
 
-    const mediaEl = resolveInteractiveMediaTarget(event, card);
-    const x = event.clientX || 0;
-    const y = event.clientY || 0;
-    const hit = !!(mediaEl && (!x || !y || pointHitsVisibleMediaPixels(mediaEl, x, y)));
+    const target = event && event.target;
+    const hit = !!(target && target.closest && target.closest(".card, .media-frame, .lightbox-stage, .media-item, .video-loading-shell, .video-loading-overlay, .video-loading-panel"));
 
     const mediaNodes = [];
     if (card._els && card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
@@ -4646,14 +4621,10 @@ function handleVisibleMediaClick(index, event) {
       card.append(frame, lightbox, fade);
       card._fade = fade;
 
-      frame.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
-      lightbox.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
-      frame.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
-      lightbox.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
-      frame.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
-      lightbox.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
-      frame.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
-      lightbox.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
+      card.addEventListener("click", (event) => handleVisibleMediaClick(index, event));
+      card.addEventListener("touchend", (event) => handleVisibleMediaClick(index, event), { passive: true });
+      card.addEventListener("mousemove", (event) => updateVisibleMediaHoverCursor(index, event));
+      card.addEventListener("mouseleave", () => clearVisibleMediaHoverCursor(index));
 
       card._els = {
         frame,
