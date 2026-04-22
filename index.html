@@ -3482,119 +3482,6 @@ body.is-booting #panelDesc {
   letter-spacing:0 !important;
 }
 
-
-/* =========================================================
-   v132 — mobile Collection literal cart clone
-   Built on approved v131 baseline.
-   Mobile Collection now uses the same visible open/close model as Cart:
-   open button hides, close button shows, inner body fades.
-   ========================================================= */
-.nav-close {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .nav-panel {
-    position: fixed !important;
-    top: 10px !important;
-    left: 10px !important;
-    z-index: 108 !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: visible !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    backdrop-filter: none !important;
-    background: transparent !important;
-    max-height: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-    display: block !important;
-  }
-
-  .nav-panel-toggle,
-  .nav-close {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    z-index: 2 !important;
-    appearance: none !important;
-    border: none !important;
-    background: rgba(0,0,0,0.88) !important;
-    color: #fff !important;
-    border-radius: 999px !important;
-    min-height: 28px !important;
-    padding: 0 16px !important;
-    font-size: 13px !important;
-    cursor: pointer !important;
-    align-items: center !important;
-    justify-content: center !important;
-    white-space: nowrap !important;
-    font-family: "Atkinson Hyperlegible", Arial, sans-serif !important;
-    transition: none !important;
-  }
-
-  .nav-panel-toggle {
-    display: inline-flex;
-  }
-
-  .nav-close {
-    display: none;
-  }
-
-  .nav-panel-inner {
-    position: absolute !important;
-    top: 34px !important;
-    left: 0 !important;
-    width: min(320px, calc(100vw - 20px)) !important;
-    max-height: calc(100vh - 44px) !important;
-    padding: 8px 8px 10px !important;
-    border-radius: 20px !important;
-    backdrop-filter: blur(30px) !important;
-    background: transparent !important;
-    overflow: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transition: opacity 220ms ease !important;
-    display: block !important;
-  }
-
-  .nav-panel.is-open .nav-panel-inner {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-
-  .nav-panel.is-open .nav-panel-toggle {
-    display: none !important;
-  }
-
-  .nav-panel.is-open .nav-close {
-    display: inline-flex !important;
-  }
-
-  .nav-grid {
-    max-height: calc(100vh - 44px - 34px - 18px) !important;
-    overflow-y: auto !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .nav-panel {
-    top: 8px !important;
-    left: 8px !important;
-  }
-
-  .nav-panel-inner {
-    width: calc(100vw - 16px) !important;
-    max-height: calc(100vh - 40px) !important;
-  }
-
-  .nav-grid {
-    max-height: calc(100vh - 40px - 34px - 18px) !important;
-  }
-}
-
 </style>
 
 
@@ -3664,7 +3551,6 @@ body.is-booting #panelDesc {
 
   <aside class="nav-panel" id="navPanel" aria-label="Site navigation">
     <button class="nav-panel-toggle" id="navPanelToggle" type="button" aria-expanded="false">Collection</button>
-    <button class="nav-close" id="navClose" type="button">Close</button>
     <div class="nav-panel-inner" id="navPanelInner">
       <div class="nav-grid" id="navGrid"></div>
     </div>
@@ -3829,7 +3715,6 @@ body.is-booting #panelDesc {
 
   const navPanel = document.getElementById("navPanel");
   const navPanelToggle = document.getElementById("navPanelToggle");
-  const navClose = document.getElementById("navClose");
   const navGrid = document.getElementById("navGrid");
   const slideTitleText = document.getElementById("slideTitleText");
   const slideTitleSlug = document.getElementById("slideTitleSlug");
@@ -5764,26 +5649,22 @@ body.is-booting #panelDesc {
     if (!navPanel) return;
     updateNavPanelMaxHeight();
 
-    if (window.innerWidth <= 768) {
-      navPanel.classList.toggle("is-open", isOpen);
-
+    if (isOpen) {
+      navPanel.classList.add("is-open");
+      navPanel.classList.remove("is-closing");
       if (navPanelToggle) {
-        navPanelToggle.style.display = isOpen ? "none" : "inline-flex";
-        navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-      }
-
-      if (navClose) {
-        navClose.style.display = isOpen ? "inline-flex" : "none";
+        navPanelToggle.setAttribute("aria-expanded", "true");
+        navPanelToggle.textContent = "Close";
       }
       return;
     }
 
-    navPanel.classList.toggle("is-open", isOpen);
+    navPanel.classList.remove("is-open");
     navPanel.classList.remove("is-closing");
 
     if (navPanelToggle) {
-      navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-      navPanelToggle.textContent = isOpen ? "Close" : "Collection";
+      navPanelToggle.setAttribute("aria-expanded", "false");
+      navPanelToggle.textContent = "Collection";
     }
   }
 
@@ -6414,12 +6295,6 @@ body.is-booting #panelDesc {
         if (window.setFooterAboutOpen) window.setFooterAboutOpen(false);
       }
       setNavPanelOpen(!isOpen);
-    });
-  }
-
-  if (navClose) {
-    navClose.addEventListener("click", () => {
-      setNavPanelOpen(false);
     });
   }
 
