@@ -3557,6 +3557,13 @@ body.is-booting #panelDesc {
     return window.innerWidth <= 900;
   }
 
+  function isInFooterScrollablePanel(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest(
+      "#footerTermsPanel, #footerAboutPanel, .footer-terms-content, .footer-about-content"
+    );
+  }
+
   function getTouchMoveStrength() {
     return isMobileTouchViewport() ? 1.95 : 0.28;
   }
@@ -6101,6 +6108,15 @@ body.is-booting #panelDesc {
   let lastY = null;
   let lastX = null;
   window.addEventListener("touchstart", (e) => {
+    if (isInFooterScrollablePanel(e.target)) {
+      lastY = null;
+      lastX = null;
+      touchGestureMoved = false;
+      touchGestureTotalDy = 0;
+      touchGestureLastDy = 0;
+      return;
+    }
+
     if (e.touches.length) {
       lastY = e.touches[0].clientY;
       lastX = e.touches[0].clientX;
@@ -6111,6 +6127,7 @@ body.is-booting #panelDesc {
   }, { passive: true });
 
   window.addEventListener("touchmove", (e) => {
+    if (isInFooterScrollablePanel(e.target)) return;
     if (!e.touches.length || lastY === null) return;
 
     const x = e.touches[0].clientX;
@@ -6142,7 +6159,16 @@ body.is-booting #panelDesc {
     start();
   }, { passive: true });
 
-  window.addEventListener("touchend", () => {
+  window.addEventListener("touchend", (e) => {
+    if (isInFooterScrollablePanel(e.target)) {
+      lastY = null;
+      lastX = null;
+      touchGestureMoved = false;
+      touchGestureTotalDy = 0;
+      touchGestureLastDy = 0;
+      return;
+    }
+
     if (touchGestureMoved) {
       velocity += touchGestureLastDy * getTouchReleaseBoost();
       targetVelocity += touchGestureTotalDy * 0.118;
