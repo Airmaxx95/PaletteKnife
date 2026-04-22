@@ -3484,32 +3484,114 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v132 — mobile Collection cart fade runtime override
+   v132 — mobile Collection literal cart clone
    Built on approved v131 baseline.
-   Force mobile Collection to fade like Cart by overriding legacy
-   nav-panel sizing/choreography at runtime.
+   Mobile Collection now uses the same visible open/close model as Cart:
+   open button hides, close button shows, inner body fades.
    ========================================================= */
+.nav-close {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .nav-panel {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 108 !important;
     width: 0 !important;
     height: 0 !important;
-    max-height: none !important;
-    padding: 0 !important;
     overflow: visible !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
+    background: transparent !important;
+    max-height: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    display: block !important;
   }
 
-  .nav-panel.is-open,
-  .nav-panel.is-closing {
-    width: 0 !important;
-    height: 0 !important;
-    max-height: none !important;
-    padding: 0 !important;
-    overflow: visible !important;
+  .nav-panel-toggle,
+  .nav-close {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 2 !important;
+    appearance: none !important;
+    border: none !important;
+    background: rgba(0,0,0,0.88) !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+    min-height: 28px !important;
+    padding: 0 16px !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    font-family: "Atkinson Hyperlegible", Arial, sans-serif !important;
+    transition: none !important;
+  }
+
+  .nav-panel-toggle {
+    display: inline-flex;
+  }
+
+  .nav-close {
+    display: none;
   }
 
   .nav-panel-inner {
+    position: absolute !important;
+    top: 34px !important;
+    left: 0 !important;
+    width: min(320px, calc(100vw - 20px)) !important;
+    max-height: calc(100vh - 44px) !important;
+    padding: 8px 8px 10px !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(30px) !important;
+    background: transparent !important;
     overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
     transition: opacity 220ms ease !important;
+    display: block !important;
+  }
+
+  .nav-panel.is-open .nav-panel-inner {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .nav-panel.is-open .nav-panel-toggle {
+    display: none !important;
+  }
+
+  .nav-panel.is-open .nav-close {
+    display: inline-flex !important;
+  }
+
+  .nav-grid {
+    max-height: calc(100vh - 44px - 34px - 18px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-panel {
+    top: 8px !important;
+    left: 8px !important;
+  }
+
+  .nav-panel-inner {
+    width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 40px) !important;
+  }
+
+  .nav-grid {
+    max-height: calc(100vh - 40px - 34px - 18px) !important;
   }
 }
 
@@ -3582,6 +3664,7 @@ body.is-booting #panelDesc {
 
   <aside class="nav-panel" id="navPanel" aria-label="Site navigation">
     <button class="nav-panel-toggle" id="navPanelToggle" type="button" aria-expanded="false">Collection</button>
+    <button class="nav-close" id="navClose" type="button">Close</button>
     <div class="nav-panel-inner" id="navPanelInner">
       <div class="nav-grid" id="navGrid"></div>
     </div>
@@ -3684,14 +3767,6 @@ body.is-booting #panelDesc {
   window.addEventListener('resize', () => {
     applyResponsiveSpacing();
     updateNavPanelMaxHeight();
-    if (isMobileNavFadeViewport() && navPanel && navPanel.classList.contains("is-open")) {
-      applyMobileNavPanelShellOverride();
-      const navInner = applyMobileNavPanelBodyOverride();
-      if (navInner) {
-        navInner.style.setProperty("opacity", "1", "important");
-        navInner.style.setProperty("pointer-events", "auto", "important");
-      }
-    }
     scheduleIdleAutoSettle();
   });
 
@@ -3754,6 +3829,7 @@ body.is-booting #panelDesc {
 
   const navPanel = document.getElementById("navPanel");
   const navPanelToggle = document.getElementById("navPanelToggle");
+  const navClose = document.getElementById("navClose");
   const navGrid = document.getElementById("navGrid");
   const slideTitleText = document.getElementById("slideTitleText");
   const slideTitleSlug = document.getElementById("slideTitleSlug");
@@ -5684,113 +5760,31 @@ body.is-booting #panelDesc {
     navPanel.style.setProperty("--nav-open-max-height", `${maxHeight}px`);
   }
 
-
-  function isMobileNavFadeViewport() {
-    return window.innerWidth <= 768;
-  }
-
-  function getMobileNavPanelMetrics() {
-    if (window.innerWidth <= 480) {
-      return {
-        width: "calc(100vw - 16px)",
-        maxHeight: "calc(100vh - 40px)",
-        gridMaxHeight: "calc(100vh - 40px - 34px - 18px)"
-      };
-    }
-    return {
-      width: "min(320px, calc(100vw - 20px))",
-      maxHeight: "calc(100vh - 44px)",
-      gridMaxHeight: "calc(100vh - 44px - 34px - 18px)"
-    };
-  }
-
-  function applyMobileNavPanelShellOverride() {
-    if (!navPanel) return;
-    navPanel.style.setProperty("width", "0", "important");
-    navPanel.style.setProperty("height", "0", "important");
-    navPanel.style.setProperty("max-height", "none", "important");
-    navPanel.style.setProperty("padding", "0", "important");
-    navPanel.style.setProperty("overflow", "visible", "important");
-  }
-
-  function applyMobileNavPanelBodyOverride() {
-    const navInner = navPanel ? navPanel.querySelector(".nav-panel-inner") : null;
-    if (!navInner) return null;
-
-    const metrics = getMobileNavPanelMetrics();
-    navInner.style.setProperty("position", "absolute", "important");
-    navInner.style.setProperty("top", "34px", "important");
-    navInner.style.setProperty("left", "0", "important");
-    navInner.style.setProperty("width", metrics.width, "important");
-    navInner.style.setProperty("max-height", metrics.maxHeight, "important");
-    navInner.style.setProperty("overflow", "hidden", "important");
-    navInner.style.setProperty("opacity", "0", "important");
-    navInner.style.setProperty("pointer-events", "none", "important");
-    navInner.style.setProperty("transition", "opacity 220ms ease", "important");
-
-    if (navGrid) {
-      navGrid.style.setProperty("max-height", metrics.gridMaxHeight, "important");
-      navGrid.style.setProperty("overflow-y", "auto", "important");
-    }
-
-    return navInner;
-  }
-
   function setNavPanelOpen(isOpen) {
     if (!navPanel) return;
     updateNavPanelMaxHeight();
 
-    if (!isMobileNavFadeViewport()) {
+    if (window.innerWidth <= 768) {
       navPanel.classList.toggle("is-open", isOpen);
-      navPanel.classList.remove("is-closing");
+
       if (navPanelToggle) {
+        navPanelToggle.style.display = isOpen ? "none" : "inline-flex";
         navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-        navPanelToggle.textContent = isOpen ? "Close" : "Collection";
+      }
+
+      if (navClose) {
+        navClose.style.display = isOpen ? "inline-flex" : "none";
       }
       return;
     }
 
-    applyMobileNavPanelShellOverride();
-    const navInner = applyMobileNavPanelBodyOverride();
-    if (!navInner) return;
-
-    if (navPanel._closeTimer) {
-      window.clearTimeout(navPanel._closeTimer);
-      navPanel._closeTimer = null;
-    }
-
+    navPanel.classList.toggle("is-open", isOpen);
     navPanel.classList.remove("is-closing");
 
-    if (isOpen) {
-      navPanel.classList.add("is-open");
-      if (navPanelToggle) {
-        navPanelToggle.setAttribute("aria-expanded", "true");
-        navPanelToggle.textContent = "Close";
-      }
-
-      navInner.style.setProperty("opacity", "0", "important");
-      navInner.style.setProperty("pointer-events", "none", "important");
-      void navInner.offsetHeight;
-      requestAnimationFrame(() => {
-        navInner.style.setProperty("opacity", "1", "important");
-        navInner.style.setProperty("pointer-events", "auto", "important");
-      });
-      return;
-    }
-
     if (navPanelToggle) {
-      navPanelToggle.setAttribute("aria-expanded", "false");
-      navPanelToggle.textContent = "Collection";
+      navPanelToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      navPanelToggle.textContent = isOpen ? "Close" : "Collection";
     }
-
-    navPanel.classList.add("is-closing");
-    navInner.style.setProperty("pointer-events", "none", "important");
-    navInner.style.setProperty("opacity", "0", "important");
-
-    navPanel._closeTimer = window.setTimeout(() => {
-      navPanel.classList.remove("is-open");
-      navPanel.classList.remove("is-closing");
-    }, 220);
   }
 
   function goToSlideAbsolute(targetIndex) {
@@ -6420,6 +6414,12 @@ body.is-booting #panelDesc {
         if (window.setFooterAboutOpen) window.setFooterAboutOpen(false);
       }
       setNavPanelOpen(!isOpen);
+    });
+  }
+
+  if (navClose) {
+    navClose.addEventListener("click", () => {
+      setNavPanelOpen(false);
     });
   }
 
