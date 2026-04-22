@@ -6251,31 +6251,6 @@ body.is-booting #panelDesc {
   
 
   let lastPanelTouchHandledAt = 0;
-  function closeFooterPanelsFromOutsideTarget(target) {
-    const termsPanel = document.getElementById("footerTermsPanel");
-    const aboutPanel = document.getElementById("footerAboutPanel");
-    const termsToggle = document.getElementById("footerTermsToggle");
-    const aboutToggle = document.getElementById("footerAboutToggle");
-
-    const insideTerms = !!(
-      termsPanel?.contains(target) ||
-      termsToggle?.contains(target)
-    );
-
-    const insideAbout = !!(
-      aboutPanel?.contains(target) ||
-      aboutToggle?.contains(target)
-    );
-
-    if (window.setFooterTermsOpen && termsPanel && termsPanel.classList.contains("is-open") && !insideTerms) {
-      window.setFooterTermsOpen(false);
-    }
-
-    if (window.setFooterAboutOpen && aboutPanel && aboutPanel.classList.contains("is-open") && !insideAbout) {
-      window.setFooterAboutOpen(false);
-    }
-  }
-
 
   function markPanelTouchHandled() {
     lastPanelTouchHandledAt = Date.now();
@@ -6296,7 +6271,9 @@ body.is-booting #panelDesc {
 
   function shouldIgnoreOutsidePanelClose(target) {
     if (!target || !target.closest) return false;
-    return false;
+    return !!target.closest(
+      "#footerTermsPanel, #footerAboutPanel, .footer-terms-content, .footer-about-content"
+    );
   }
 
   function closePanelsFromOutsideTarget(target) {
@@ -6347,13 +6324,11 @@ body.is-booting #panelDesc {
   document.addEventListener("click", (event) => {
     if (isSyntheticPanelClickAfterTouch()) return;
     closePanelsFromOutsideTarget(event.target);
-    closeFooterPanelsFromOutsideTarget(event.target);
   });
 
   document.addEventListener("touchstart", (event) => {
     markPanelTouchHandled();
     closePanelsFromOutsideTarget(event.target);
-    closeFooterPanelsFromOutsideTarget(event.target);
   }, { passive: true });
 
   if (cartToggle) {
