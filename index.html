@@ -5650,6 +5650,9 @@ body.is-booting #panelDesc {
       button.addEventListener("click", (event) => {
         event.stopPropagation();
         goToSlideAbsolute(index);
+        if (window.innerWidth <= 768) {
+          setNavPanelOpen(false);
+        }
       });
 
       fragment.appendChild(button);
