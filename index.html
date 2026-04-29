@@ -1438,7 +1438,7 @@
 
 .logo-svg {
     display: block;
-    height: 2em;
+    height: 3em;
     width: auto;
     max-width: 100%;
   }
@@ -1551,7 +1551,7 @@
   }
 
   .logo-svg {
-    height: 1.3em !important;
+    height: 3.3em !important;
   }
 
   .nav-panel {
@@ -1768,7 +1768,7 @@
   }
 
   .logo-svg {
-    height: 1.18em !important;
+    height: 2.18em !important;
   }
 
   .slide-title-display {
@@ -1835,7 +1835,7 @@
   }
 
   .logo-svg {
-    height: 2.6em !important;
+    height: 3.6em !important;
   }
 
   /* Larger slides now that left meta is no longer floating separately */
@@ -2015,7 +2015,7 @@
   }
 
   .logo-svg {
-    height: 2.3em !important;
+    height: 3.3em !important;
   }
 
   .slide-title-display {
@@ -3557,13 +3557,14 @@ body.is-booting #panelDesc {
   justify-content: center;
   line-height: 0;
   pointer-events: none;
+  transform-origin: center center;
 }
 .webgl-logo-model {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(260px, 27vw, 520px);
-  height: clamp(86px, 8.8vw, 150px);
+  width: clamp(320px, 33vw, 640px);
+  height: clamp(108px, 11vw, 186px);
   transform: translate(-50%, -50%);
   opacity: 0;
   pointer-events: none;
@@ -3577,6 +3578,7 @@ body.is-booting #panelDesc {
   z-index: 2;
   display: block;
   transition: opacity 240ms ease;
+  transform-origin: center center;
 }
 .site-header.is-webgl-logo-ready .webgl-logo-model { opacity: 1; }
 .site-header.is-webgl-logo-ready .webgl-logo-fallback { opacity: 0; }
