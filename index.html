@@ -47,6 +47,7 @@
 
 <title>PaletteKnife — Editions & Objects</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="preload" href="media/brand/studio_small_09.hdr" as="fetch" type="application/octet-stream" crossorigin>
 <style>
   :root {
     --perspective: 900px;
@@ -3632,7 +3633,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147o" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147w-hdri" data-env-src="media/brand/studio_small_09.hdr">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6927,8 +6928,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
 
-  const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147o";
-  const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.jpg";
+  const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147w-hdri";
+  const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.hdr";
+
+  // Blender Mapping node values for reflection orientation.
+  // Location: 0, 0, 0 | Rotation: X 9.2°, Y 178°, Z 53.2° | Scale: 1, 1, 1
+  const blenderEnvironmentRotationDeg = { x: 9.2, y: 178.0, z: 53.2 };
 
   let THREE, GLTFLoader, RGBELoader, DRACOLoader;
   let renderer, scene, camera, logoGroup, pmremGenerator;
@@ -6939,17 +6944,27 @@ document.addEventListener('DOMContentLoaded', function () {
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
   const reactive = { scrollEnergy: 0, lastPosition: 0, syntheticPhase: 0, velocityMemory: 0 };
 
-const headerMotion = {
-  xPhase: 0,
-  xVelocity: 0,
-  lastNow: 0
-};
+  function applyBlenderEnvironmentMapping() {
+    if (!THREE || !scene || !blenderEnvironmentRotationDeg) return;
+    const rotation = new THREE.Euler(
+      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.x),
+      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.y),
+      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.z),
+      "XYZ"
+    );
+    if ("environmentRotation" in scene) scene.environmentRotation.copy(rotation);
+    if ("backgroundRotation" in scene) scene.backgroundRotation.copy(rotation);
+  }
 
-const envMapMotion = {
-  xPhase: 0,
-  xVelocity: 0,
-  lastNow: 0
-};
+  function tuneChromeForHdriContrast() {
+    chromeMaterials.forEach(function (mat) {
+      if ("metalness" in mat) mat.metalness = 1.0;
+      if ("roughness" in mat) mat.roughness = 0.012;
+      if ("color" in mat) mat.color = new THREE.Color(0xf8f9fb);
+      mat.envMapIntensity = 6.2;
+      mat.needsUpdate = true;
+    });
+  }
 
   function updateHolderSize() {
     if (!holder || !renderer || !camera) return;
@@ -6984,12 +6999,13 @@ const envMapMotion = {
       const materials = Array.isArray(child.material) ? child.material : [child.material];
       materials.forEach((mat) => {
         if ("metalness" in mat) mat.metalness = 1.0;
-        if ("roughness" in mat) mat.roughness = 0.03;
-        if ("color" in mat) mat.color = new THREE.Color(0xf5f7f9);
-        mat.envMapIntensity = 3.6;
+        if ("roughness" in mat) mat.roughness = 0.012;
+        if ("color" in mat) mat.color = new THREE.Color(0xf8f9fb);
+        mat.envMapIntensity = 6.2;
         mat.needsUpdate = true;
         if (!chromeMaterials.includes(mat)) chromeMaterials.push(mat);
       });
+      tuneChromeForHdriContrast();
       if (child.geometry) child.geometry.computeVertexNormals();
     });
   }
@@ -6997,28 +7013,32 @@ const envMapMotion = {
   function makeFallbackEnvironment() {
     const envScene = new THREE.Scene();
     const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 32, 16),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x1c1c1c })
+      new THREE.SphereGeometry(5, 64, 32),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x101010 })
     );
     envScene.add(sphere);
 
     [
-      { y: 1.5, z: -3.5, color: 0xffffff },
-      { y: 0.25, z: -3.7, color: 0xdde6ff },
-      { y: -1.15, z: -3.8, color: 0x050505 },
-      { y: 0.0, z: 3.4, color: 0xffffff }
+      { y: 1.75, z: -3.6, color: 0xffffff, h: 0.18 },
+      { y: 0.88, z: -3.7, color: 0xeef3ff, h: 0.12 },
+      { y: 0.08, z: -3.8, color: 0x020202, h: 0.30 },
+      { y: -0.72, z: -3.7, color: 0xffffff, h: 0.15 },
+      { y: -1.45, z: -3.6, color: 0x080808, h: 0.24 },
+      { y: 0.55, z: 3.55, color: 0xffffff, h: 0.12 },
+      { y: -0.62, z: 3.45, color: 0x030303, h: 0.26 }
     ].forEach((s) => {
       const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(8, 0.38),
-        new THREE.MeshBasicMaterial({ color: s.color })
+        new THREE.PlaneGeometry(9, s.h),
+        new THREE.MeshBasicMaterial({ color: s.color, side: THREE.DoubleSide })
       );
       strip.position.set(0, s.y, s.z);
       if (s.z > 0) strip.rotation.y = Math.PI;
       envScene.add(strip);
     });
 
-    const rt = pmremGenerator.fromScene(envScene, 0.04);
+    const rt = pmremGenerator.fromScene(envScene, 0.018);
     scene.environment = rt.texture;
+    applyBlenderEnvironmentMapping();
   }
 
   async function init() {
@@ -7046,42 +7066,49 @@ const envMapMotion = {
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.5;
+      renderer.toneMappingExposure = 1.72;
 
       scene = new THREE.Scene();
+      applyBlenderEnvironmentMapping();
       camera = new THREE.PerspectiveCamera(24, 1, 0.01, 100);
       camera.position.set(0, 0, 4.8);
       pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
       updateHolderSize();
 
-      const ambient = new THREE.AmbientLight(0xffffff, 0.16);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.10);
       scene.add(ambient);
-      const key = new THREE.DirectionalLight(0xffffff, 1.1);
+      const key = new THREE.DirectionalLight(0xffffff, 1.85);
       key.position.set(2.3, 2.7, 3.8);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0xffffff, 2.2);
+      const rim = new THREE.DirectionalLight(0xffffff, 3.8);
       rim.position.set(-3.1, 1.3, 2.2);
       scene.add(rim);
 
-      setStatus("loading_environment");
+      setStatus("loading_hdri_environment");
       try {
         let envTexture;
-        if (/\.hdr(\?|$)/i.test(envSrc)) {
+        try {
           envTexture = await new RGBELoader().loadAsync(envSrc);
-        } else {
-          envTexture = await new THREE.TextureLoader().loadAsync(envSrc);
+          setStatus("hdri_loaded");
+        } catch (hdrError) {
+          console.warn("HDRI failed; trying JPG fallback.", hdrError);
+          envTexture = await new THREE.TextureLoader().loadAsync("media/brand/studio_small_09.jpg");
           envTexture.colorSpace = THREE.SRGBColorSpace;
+          setStatus("jpg_environment_loaded_as_fallback");
         }
+
         envTexture.mapping = THREE.EquirectangularReflectionMapping;
         const envMap = pmremGenerator.fromEquirectangular(envTexture).texture;
         scene.environment = envMap;
+        applyBlenderEnvironmentMapping();
         envTexture.dispose();
-        setStatus("environment_loaded");
+
+        setStatus("environment_loaded_hdri_contrast");
       } catch (envError) {
-        console.warn("Environment image failed; using generated chrome environment.", envError);
+        console.warn("HDRI/JPG environment failed; using generated high-contrast chrome environment.", envError);
         makeFallbackEnvironment();
-        setStatus("environment_fallback_generated");
+        setStatus("environment_fallback_generated_high_contrast");
       }
 
       setStatus("loading_glb_draco");
@@ -7157,67 +7184,14 @@ const envMapMotion = {
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
     logoGroup.rotation.y = THREE.MathUtils.degToRad(Math.sin(t * 0.22 + phase) * (2.8 + energy * 1.2));
-    
-/* v147s visible environment/JPG X-axis scrub
-      The GLB geometry stays still.
-      The studio_small_09.jpg / generated environment mapping slowly scrubs through X.
-    */
-    const dt = envMapMotion.lastNow
-      ? Math.min(0.05, Math.max(0.001, (now - envMapMotion.lastNow) / 1000))
-      : 0.016;
-
-    envMapMotion.lastNow = now;
-
-    const scrollDrive =
-      zaxis.velocity +
-      zaxis.targetVelocity +
-      reactive.velocityMemory;
-
-    // Slow constant drift at idle.
-    const idleSpeed = 0.055;
-
-    // Scroll adds signed scrub speed. Forward = forward mapping movement. Backward = reverse.
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.018, -2.40, 2.40);
-    const targetVelocity = idleSpeed + scrubSpeed;
-
-    const smoothing =
-      Math.abs(scrollDrive) > 0.08 ? 0.24 : 0.028;
-
-    envMapMotion.xVelocity +=
-      (targetVelocity - envMapMotion.xVelocity) * smoothing;
-
-    envMapMotion.xPhase += envMapMotion.xVelocity * dt;
-
-    // Keep the actual GLB locked.
-    logoGroup.rotation.x = 0;
-    logoGroup.rotation.y = 0;
-    logoGroup.rotation.z = 0;
-
-    // Apply scrub to scene environment and directly to chrome materials where supported.
-    const envX = envMapMotion.xPhase;
-    const envY = Math.PI;
-    const envZ = 0;
-
-    if (scene && "environmentRotation" in scene) {
-      scene.environmentRotation.set(envX, envY, envZ);
-    }
-    if (scene && "backgroundRotation" in scene) {
-      scene.backgroundRotation.set(envX, envY, envZ);
-    }
-
-    chromeMaterials.forEach(function (mat) {
-      if ("envMapRotation" in mat && mat.envMapRotation && typeof mat.envMapRotation.set === "function") {
-        mat.envMapRotation.set(envX, envY, envZ);
-        mat.needsUpdate = true;
-      }
-    });
-
+    logoGroup.rotation.x = THREE.MathUtils.degToRad(Math.sin(t * 0.18 + phase * 0.45) * (1.2 + energy * 0.6));
 
     camera.position.x = Math.sin(t * 0.26 + phase) * (0.36 + energy * 0.22) + momentum * 0.18;
     camera.position.y = Math.sin(t * 0.20 + phase * 0.52) * (0.10 + energy * 0.06);
     camera.lookAt(0, 0, 0);
 
-    renderer.toneMappingExposure = Math.min(2.25, Math.max(1.25, 1.5 + energy * 0.32 + Math.sin(t * 0.42) * 0.03));
+    renderer.toneMappingExposure = Math.min(2.65, Math.max(1.42, 1.72 + energy * 0.38 + Math.sin(t * 0.42) * 0.025));
+    tuneChromeForHdriContrast();
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
