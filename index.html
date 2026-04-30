@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147o" data-env-src="media/brand/studio_small_09.hdr">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147o" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6928,9 +6928,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147o";
-  const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.hdr";
+  const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.jpg";
 
-  let THREE, GLTFLoader, RGBELoader;
+  let THREE, GLTFLoader, RGBELoader, DRACOLoader;
   let renderer, scene, camera, logoGroup, pmremGenerator;
   let loaded = false;
   let firstFrameRendered = false;
@@ -7013,11 +7013,13 @@ document.addEventListener('DOMContentLoaded', function () {
       const modules = await Promise.all([
         import("https://esm.sh/three@0.160.0"),
         import("https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js?deps=three@0.160.0"),
-        import("https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js?deps=three@0.160.0")
+        import("https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js?deps=three@0.160.0"),
+        import("https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js?deps=three@0.160.0")
       ]);
       THREE = modules[0];
       GLTFLoader = modules[1].GLTFLoader;
       RGBELoader = modules[2].RGBELoader;
+      DRACOLoader = modules[3].DRACOLoader;
     } catch (error) {
       console.warn("PaletteKnife Three.js imports failed", error);
       fallback("three_import_failed");
@@ -7050,21 +7052,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
       setStatus("loading_environment");
       try {
-        const hdrTexture = await new RGBELoader().loadAsync(envSrc);
-        hdrTexture.mapping = THREE.EquirectangularReflectionMapping;
-        const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+        let envTexture;
+        if (/\.hdr(\?|$)/i.test(envSrc)) {
+          envTexture = await new RGBELoader().loadAsync(envSrc);
+        } else {
+          envTexture = await new THREE.TextureLoader().loadAsync(envSrc);
+          envTexture.colorSpace = THREE.SRGBColorSpace;
+        }
+        envTexture.mapping = THREE.EquirectangularReflectionMapping;
+        const envMap = pmremGenerator.fromEquirectangular(envTexture).texture;
         scene.environment = envMap;
-        hdrTexture.dispose();
+        envTexture.dispose();
         setStatus("environment_loaded");
       } catch (envError) {
-        console.warn("HDR environment failed; using generated chrome environment.", envError);
+        console.warn("Environment image failed; using generated chrome environment.", envError);
         makeFallbackEnvironment();
         setStatus("environment_fallback_generated");
       }
 
-      setStatus("loading_glb");
-      const gltf = await new GLTFLoader().loadAsync(glbSrc);
+      setStatus("loading_glb_draco");
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
+      dracoLoader.setDecoderConfig({ type: "js" });
+
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.setDRACOLoader(dracoLoader);
+
+      const gltf = await gltfLoader.loadAsync(glbSrc);
       logoGroup = gltf.scene;
+      try { dracoLoader.dispose(); } catch(e) {}
       tuneMaterials(logoGroup);
       fitObjectToView(logoGroup);
       scene.add(logoGroup);
@@ -7074,7 +7090,7 @@ document.addEventListener('DOMContentLoaded', function () {
       window.addEventListener("resize", updateHolderSize, { passive: true });
       animate(performance.now());
     } catch (error) {
-      console.warn("PaletteKnife Three.js GLB renderer failed", error);
+      console.warn("PaletteKnife Three.js DRACO GLB renderer failed", error);
       fallback("three_renderer_failed");
     }
   }
