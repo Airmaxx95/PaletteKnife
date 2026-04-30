@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147o" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=147w" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6927,7 +6927,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
 
-  const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147v";
+  const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147w";
   const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.jpg";
 
   // Blender Mapping node values for reflection orientation.
@@ -6935,15 +6935,16 @@ document.addEventListener('DOMContentLoaded', function () {
   const blenderEnvironmentRotationDeg = { x: 9.2, y: 178.0, z: 53.2 };
 
   let THREE, GLTFLoader, RGBELoader, DRACOLoader;
-  let renderer, scene, camera, logoGroup, pmremGenerator, reflectionDriver;
+  let renderer, scene, camera, logoGroup, pmremGenerator;
   const chromeMaterials = [];
+  let directReflectionTexture = null;
   let loaded = false;
   let firstFrameRendered = false;
 
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
   const reactive = { scrollEnergy: 0, lastPosition: 0, syntheticPhase: 0, velocityMemory: 0 };
 
-  const reflectionMotion = {
+  const directJpgScrub = {
     phase: 0,
     velocity: 0,
     lastNow: 0
@@ -6953,48 +6954,48 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!THREE || !scene || !blenderEnvironmentRotationDeg) return;
     const phase = phaseOffset || 0;
     const rotation = new THREE.Euler(
-      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.x) + phase * 0.20,
+      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.x) + phase * 0.24,
       THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.y) + phase * 0.38,
-      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.z) + phase * 0.16,
+      THREE.MathUtils.degToRad(blenderEnvironmentRotationDeg.z) + phase * 0.18,
       "XYZ"
     );
     if ("environmentRotation" in scene) scene.environmentRotation.copy(rotation);
     if ("backgroundRotation" in scene) scene.backgroundRotation.copy(rotation);
   }
 
-  function createCleanReflectionDriver() {
-    /*
-      v147v clean reflection control:
-      No visible planes, no geometry bars, no camera movement, no model movement.
-      A compact light rig moves around the static chrome to create readable highlights.
-    */
-    const rig = new THREE.Group();
-    rig.name = "PaletteKnifeCleanReflectionDriver";
-
-    const topSweep = new THREE.DirectionalLight(0xffffff, 3.4);
-    topSweep.position.set(-3.2, 2.2, 3.6);
-    rig.add(topSweep);
-
-    const lowerSweep = new THREE.DirectionalLight(0xe9eefb, 2.0);
-    lowerSweep.position.set(2.6, -1.4, 2.8);
-    rig.add(lowerSweep);
-
-    const rimSweep = new THREE.DirectionalLight(0xffffff, 3.8);
-    rimSweep.position.set(-4.4, 0.1, 2.6);
-    rig.add(rimSweep);
-
-    const softFill = new THREE.HemisphereLight(0xffffff, 0x111111, 0.62);
-    rig.add(softFill);
-
-    scene.add(rig);
-    return rig;
+  function applyDirectReflectionTextureToMaterials() {
+    if (!directReflectionTexture) return;
+    chromeMaterials.forEach(function (mat) {
+      /*
+        Direct JPG reflection scrub:
+        The JPG is assigned directly to the chrome material's envMap, not only to scene.environment.
+        This makes material-level envMapRotation visible and scrub-able.
+      */
+      mat.envMap = directReflectionTexture;
+      mat.envMapIntensity = 4.8;
+      if ("metalness" in mat) mat.metalness = 1.0;
+      if ("roughness" in mat) mat.roughness = 0.018;
+      if ("color" in mat) mat.color = new THREE.Color(0xf7f8fa);
+      mat.needsUpdate = true;
+    });
   }
 
-  function updateChromeResponse(phase, energy) {
+  function scrubDirectReflectionTexture(phase, energy) {
+    const envX = phase;
+    const envY = THREE.MathUtils.degToRad(178.0) + phase * 0.26;
+    const envZ = THREE.MathUtils.degToRad(53.2) + phase * 0.18;
+
+    if (scene && "environmentRotation" in scene) {
+      scene.environmentRotation.set(envX + THREE.MathUtils.degToRad(9.2), envY, envZ);
+    }
+
     chromeMaterials.forEach(function (mat) {
-      mat.envMapIntensity = 4.4 + energy * 1.2 + Math.sin(phase * 0.8) * 0.35;
-      if ("roughness" in mat) mat.roughness = 0.022;
-      if ("metalness" in mat) mat.metalness = 1.0;
+      if ("envMapRotation" in mat && mat.envMapRotation && typeof mat.envMapRotation.set === "function") {
+        mat.envMapRotation.set(envX, envY, envZ);
+      }
+
+      // Increase contrast response slightly during movement without moving the object.
+      mat.envMapIntensity = 4.8 + energy * 1.4;
       mat.needsUpdate = true;
     });
   }
@@ -7032,45 +7033,42 @@ document.addEventListener('DOMContentLoaded', function () {
       const materials = Array.isArray(child.material) ? child.material : [child.material];
       materials.forEach((mat) => {
         if ("metalness" in mat) mat.metalness = 1.0;
-        if ("roughness" in mat) mat.roughness = 0.022;
+        if ("roughness" in mat) mat.roughness = 0.018;
         if ("color" in mat) mat.color = new THREE.Color(0xf7f8fa);
-        mat.envMapIntensity = 4.4;
-        mat.needsUpdate = true;
+        mat.envMapIntensity = 4.8;
         if (!chromeMaterials.includes(mat)) chromeMaterials.push(mat);
+        mat.needsUpdate = true;
       });
+      applyDirectReflectionTextureToMaterials();
       if (child.geometry) child.geometry.computeVertexNormals();
     });
   }
 
   function makeFallbackEnvironment() {
     const envScene = new THREE.Scene();
-
     const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 48, 24),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x181818 })
+      new THREE.SphereGeometry(5, 32, 16),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x1c1c1c })
     );
     envScene.add(sphere);
 
     [
-      { y: 1.65, z: -3.6, color: 0xffffff, h: 0.22 },
-      { y: 0.58, z: -3.7, color: 0xeef3ff, h: 0.16 },
-      { y: -0.18, z: -3.75, color: 0x050505, h: 0.26 },
-      { y: -1.25, z: -3.55, color: 0xffffff, h: 0.20 },
-      { y: 0.25, z: 3.5, color: 0x0a0a0a, h: 0.28 },
-      { y: -0.95, z: 3.45, color: 0xffffff, h: 0.18 }
+      { y: 1.5, z: -3.5, color: 0xffffff },
+      { y: 0.25, z: -3.7, color: 0xdde6ff },
+      { y: -1.15, z: -3.8, color: 0x050505 },
+      { y: 0.0, z: 3.4, color: 0xffffff }
     ].forEach((s) => {
       const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(9, s.h),
-        new THREE.MeshBasicMaterial({ color: s.color, side: THREE.DoubleSide })
+        new THREE.PlaneGeometry(8, 0.38),
+        new THREE.MeshBasicMaterial({ color: s.color })
       );
       strip.position.set(0, s.y, s.z);
       if (s.z > 0) strip.rotation.y = Math.PI;
       envScene.add(strip);
     });
 
-    const rt = pmremGenerator.fromScene(envScene, 0.025);
+    const rt = pmremGenerator.fromScene(envScene, 0.04);
     scene.environment = rt.texture;
-    applyBlenderEnvironmentMapping(0);
   }
 
   async function init() {
@@ -7117,9 +7115,7 @@ document.addEventListener('DOMContentLoaded', function () {
       rim.position.set(-3.1, 1.3, 2.2);
       scene.add(rim);
 
-      reflectionDriver = createCleanReflectionDriver();
-
-      setStatus("loading_environment");
+      setStatus("loading_direct_jpg_reflection");
       try {
         let envTexture;
         if (/\.hdr(\?|$)/i.test(envSrc)) {
@@ -7128,14 +7124,22 @@ document.addEventListener('DOMContentLoaded', function () {
           envTexture = await new THREE.TextureLoader().loadAsync(envSrc);
           envTexture.colorSpace = THREE.SRGBColorSpace;
         }
+
         envTexture.mapping = THREE.EquirectangularReflectionMapping;
+        envTexture.wrapS = THREE.RepeatWrapping;
+        envTexture.wrapT = THREE.RepeatWrapping;
+        envTexture.needsUpdate = true;
+
+        directReflectionTexture = envTexture;
+
+        // Scene.environment still gets PMREM for general lighting.
         const envMap = pmremGenerator.fromEquirectangular(envTexture).texture;
         scene.environment = envMap;
         applyBlenderEnvironmentMapping(0);
-        envTexture.dispose();
-        setStatus("environment_loaded_clean_mapping");
+
+        setStatus("direct_jpg_reflection_loaded");
       } catch (envError) {
-        console.warn("Environment image failed; using generated chrome environment.", envError);
+        console.warn("Direct JPG reflection failed; using generated chrome environment.", envError);
         makeFallbackEnvironment();
         setStatus("environment_fallback_generated");
       }
@@ -7213,27 +7217,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
     /*
-      v147v clean reflection control:
-      - GLB geometry is locked
-      - camera is locked
-      - moving light/reflection driver creates chrome movement
-      - scroll forward/back controls the reflection sweep direction
-      - idle returns to a subtle forward drift
+      v147w Direct JPG Reflection Scrub:
+      - GLB geometry stays static
+      - camera stays static
+      - studio_small_09.jpg is assigned directly to chrome material envMap
+      - scroll scrubs material envMapRotation forward/back
+      - idle slowly drifts forward
     */
-    const dt = reflectionMotion.lastNow
-      ? Math.min(0.05, Math.max(0.001, (now - reflectionMotion.lastNow) / 1000))
+    const dt = directJpgScrub.lastNow
+      ? Math.min(0.05, Math.max(0.001, (now - directJpgScrub.lastNow) / 1000))
       : 0.016;
 
-    reflectionMotion.lastNow = now;
+    directJpgScrub.lastNow = now;
 
     const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
-    const idleSpeed = 0.055;
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.020, -2.65, 2.65);
+    const idleSpeed = 0.060;
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.030, -3.20, 3.20);
     const targetVelocity = idleSpeed + scrubSpeed;
-    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.24 : 0.035;
+    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.28 : 0.035;
 
-    reflectionMotion.velocity += (targetVelocity - reflectionMotion.velocity) * smoothing;
-    reflectionMotion.phase += reflectionMotion.velocity * dt;
+    directJpgScrub.velocity += (targetVelocity - directJpgScrub.velocity) * smoothing;
+    directJpgScrub.phase += directJpgScrub.velocity * dt;
 
     logoGroup.rotation.x = 0;
     logoGroup.rotation.y = 0;
@@ -7243,26 +7247,9 @@ document.addEventListener('DOMContentLoaded', function () {
     camera.position.y = 0;
     camera.lookAt(0, 0, 0);
 
-    if (reflectionDriver) {
-      reflectionDriver.rotation.x = reflectionMotion.phase * 0.85;
-      reflectionDriver.rotation.y = Math.sin(reflectionMotion.phase * 0.55) * 0.20;
-      reflectionDriver.rotation.z = Math.sin(reflectionMotion.phase * 0.38) * 0.10;
+    scrubDirectReflectionTexture(directJpgScrub.phase, energy);
 
-      reflectionDriver.children.forEach(function (child, index) {
-        if (child.isDirectionalLight || child.isHemisphereLight) {
-          const pulse = 1 + Math.sin(reflectionMotion.phase * (0.72 + index * 0.11)) * 0.18;
-          if (index === 0) child.intensity = 3.4 * pulse;
-          if (index === 1) child.intensity = 2.0 * pulse;
-          if (index === 2) child.intensity = 3.8 * pulse;
-          if (index === 3) child.intensity = 0.62 * pulse;
-        }
-      });
-    }
-
-    applyBlenderEnvironmentMapping(reflectionMotion.phase);
-    updateChromeResponse(reflectionMotion.phase, energy);
-
-    renderer.toneMappingExposure = Math.min(2.40, Math.max(1.30, 1.58 + energy * 0.30 + Math.sin(t * 0.30) * 0.018));
+    renderer.toneMappingExposure = Math.min(2.45, Math.max(1.30, 1.58 + energy * 0.30 + Math.sin(t * 0.30) * 0.018));
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
