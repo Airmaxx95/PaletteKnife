@@ -6935,6 +6935,12 @@ document.addEventListener('DOMContentLoaded', function () {
   let liveEnvScene, liveEnvRig, liveEnvCubeCamera, liveEnvTarget;
   const proofChromeMaterials = [];
   const proofEnvironment = { phase: 0, lastNow: 0 };
+
+  const liveEnvironmentMotion = {
+    phase: 0,
+    velocity: 0,
+    lastNow: 0
+  };
   let loaded = false;
   let firstFrameRendered = false;
 
@@ -6992,16 +6998,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function makeFallbackEnvironment() {
     /*
-      v148b live environment proof:
-      The reflection is not moved using scene.environmentRotation.
-      Instead, a hidden reflection scene is rendered into a CubeCamera target.
-      The hidden environment rig rotates, the cube target updates, and the chrome reflects that live movement.
+      v148c live CubeCamera environment:
+      Hidden, asymmetrical black/white reflection scene.
+      It is never drawn to the page; it is only rendered into a cubemap every frame.
     */
     liveEnvScene = new THREE.Scene();
 
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(5, 64, 32),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x080808 })
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x070707 })
     );
     liveEnvScene.add(sphere);
 
@@ -7009,19 +7014,21 @@ document.addEventListener('DOMContentLoaded', function () {
     liveEnvScene.add(liveEnvRig);
 
     [
-      { y: 1.65, z: -3.6, color: 0xffffff, h: 0.46 },
-      { y: 0.55, z: -3.6, color: 0xeeeeee, h: 0.20 },
-      { y: -0.20, z: -3.7, color: 0x000000, h: 0.52 },
-      { y: -1.25, z: -3.6, color: 0xffffff, h: 0.30 },
-      { y: 0.88, z: 3.5, color: 0xffffff, h: 0.34 },
-      { y: -0.72, z: 3.5, color: 0x000000, h: 0.56 },
-      { y: 0.0, z: -3.95, color: 0xffffff, h: 0.08 }
+      { x: -0.6, y: 1.72, z: -3.6, color: 0xffffff, w: 8.5, h: 0.42, rz: -0.10 },
+      { x: 0.9, y: 0.86, z: -3.7, color: 0xeeeeee, w: 5.8, h: 0.16, rz: 0.18 },
+      { x: -1.3, y: 0.08, z: -3.8, color: 0x000000, w: 9.5, h: 0.56, rz: -0.04 },
+      { x: 1.6, y: -0.78, z: -3.7, color: 0xffffff, w: 6.4, h: 0.18, rz: 0.24 },
+      { x: -0.3, y: -1.42, z: -3.6, color: 0x020202, w: 8.8, h: 0.30, rz: -0.14 },
+      { x: 1.2, y: 1.05, z: 3.5, color: 0xffffff, w: 7.2, h: 0.32, rz: 0.11 },
+      { x: -1.0, y: -0.58, z: 3.5, color: 0x000000, w: 8.2, h: 0.52, rz: -0.20 },
+      { x: 2.2, y: 0.18, z: -3.95, color: 0xffffff, w: 3.8, h: 0.08, rz: 0.45 }
     ].forEach((s) => {
       const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(10, s.h),
+        new THREE.PlaneGeometry(s.w, s.h),
         new THREE.MeshBasicMaterial({ color: s.color, side: THREE.DoubleSide })
       );
-      strip.position.set(0, s.y, s.z);
+      strip.position.set(s.x, s.y, s.z);
+      strip.rotation.z = s.rz;
       if (s.z > 0) strip.rotation.y = Math.PI;
       liveEnvRig.add(strip);
     });
@@ -7034,11 +7041,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     liveEnvCubeCamera = new THREE.CubeCamera(0.1, 10, liveEnvTarget);
     liveEnvCubeCamera.position.set(0, 0, 0);
+    liveEnvScene.add(liveEnvCubeCamera);
 
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v148b_live_cube_camera_environment",
+      mode: "v148c_live_cubecamera_zaxis_scroll_scrub",
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
   }
@@ -7166,19 +7174,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const phase = zaxis.position * 0.00285 + reactive.syntheticPhase + reactive.velocityMemory * 0.0015;
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
-        /*
-      v148b live CubeCamera environment proof:
+            /*
+      v148c live CubeCamera environment scroll scrub:
       - object locked
       - camera locked
-      - hidden black/white environment rig rotates
-      - CubeCamera re-renders that environment into the chrome reflection map
+      - hidden black/white environment rig updates every frame
+      - z-axis scroll drives direction and speed
+      - idle eases back into a slow forward drift
     */
-    const dt = proofEnvironment.lastNow
-      ? Math.min(0.05, Math.max(0.001, (now - proofEnvironment.lastNow) / 1000))
+    const dt = liveEnvironmentMotion.lastNow
+      ? Math.min(0.05, Math.max(0.001, (now - liveEnvironmentMotion.lastNow) / 1000))
       : 0.016;
-    proofEnvironment.lastNow = now;
+    liveEnvironmentMotion.lastNow = now;
 
-    proofEnvironment.phase += dt * 0.32;
+    const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
+    const idleSpeed = 0.075;
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.030, -3.2, 3.2);
+    const targetVelocity = idleSpeed + scrubSpeed;
+    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.26 : 0.04;
+
+    liveEnvironmentMotion.velocity += (targetVelocity - liveEnvironmentMotion.velocity) * smoothing;
+    liveEnvironmentMotion.phase += liveEnvironmentMotion.velocity * dt;
 
     logoGroup.rotation.x = 0;
     logoGroup.rotation.y = 0;
@@ -7188,24 +7204,26 @@ document.addEventListener('DOMContentLoaded', function () {
     camera.position.y = 0;
     camera.lookAt(0, 0, 0);
 
-    if (liveEnvRig && liveEnvCubeCamera && liveEnvScene) {
-      liveEnvRig.rotation.x = proofEnvironment.phase;
-      liveEnvRig.rotation.y = proofEnvironment.phase * 0.35;
+    if (liveEnvRig && liveEnvCubeCamera && liveEnvScene && liveEnvTarget) {
+      liveEnvRig.rotation.x = liveEnvironmentMotion.phase;
+      liveEnvRig.rotation.y = liveEnvironmentMotion.phase * 0.42;
+      liveEnvRig.rotation.z = Math.sin(liveEnvironmentMotion.phase * 0.35) * 0.12;
+
       liveEnvCubeCamera.update(renderer, liveEnvScene);
       scene.environment = liveEnvTarget.texture;
     }
 
-    if (typeof proofChromeMaterials !== "undefined") {
+    if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
-        mat.envMap = liveEnvTarget ? liveEnvTarget.texture : scene.environment;
-        mat.envMapIntensity = 6.5;
-        if ("roughness" in mat) mat.roughness = 0.016;
+        mat.envMap = liveEnvTarget.texture;
+        mat.envMapIntensity = 6.8 + energy * 0.8;
+        if ("roughness" in mat) mat.roughness = 0.014;
         if ("metalness" in mat) mat.metalness = 1.0;
         mat.needsUpdate = true;
       });
     }
 
-    renderer.toneMappingExposure = 1.82;
+    renderer.toneMappingExposure = 1.86;
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
