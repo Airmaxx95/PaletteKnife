@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149h-smooth-studio-light-sweep" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=150-studio-strip-y-only" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6939,8 +6939,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const liveEnvironmentMotion = {
     phase: 0,
     velocity: 0,
-    lastNow: 0,
-    clockPhase: 0
+    lastNow: 0
   };
   let loaded = false;
   let firstFrameRendered = false;
@@ -6999,85 +6998,55 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function makeFallbackEnvironment() {
     /*
-      v149h smooth studio-light reflection world:
+      v150 controlled studio strip rig:
       Hidden reflection world only.
-      Uses large continuous horizontal luminous bands, not many broken fragments.
-      Aim: smooth studio strip-light sweeps across chrome, not blob-like shapes.
+      Four intentional continuous horizontal bands:
+      1. dominant white strip
+      2. black contrast cut
+      3. soft secondary highlight
+      4. faint rim strip
+
+      No random bars. No segmentation. No per-bar animation.
     */
     liveEnvScene = new THREE.Scene();
 
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(5, 96, 48),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x030303 })
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x050505 })
     );
     liveEnvScene.add(sphere);
 
     liveEnvRig = new THREE.Group();
     liveEnvScene.add(liveEnvRig);
 
-    function addBand(y, z, width, height, color, opacity, sideName) {
+    function addContinuousBand(name, y, z, width, height, color, opacity) {
       const mat = new THREE.MeshBasicMaterial({
         color: color,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: opacity
+        opacity: opacity,
+        depthWrite: false
       });
 
       const strip = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
+      strip.name = name;
       strip.position.set(0, y, z);
+
       if (z > 0) strip.rotation.y = Math.PI;
 
-      strip.userData.pkSideName = sideName || "";
       liveEnvRig.add(strip);
       return strip;
     }
 
-    /*
-      Big uninterrupted studio bands.
-      These are deliberately wide so the logo reflects long clean streaks.
-    */
-    addBand(1.55, -3.85, 18.0, 0.20, 0xffffff, 0.98, "rear_top_white");
-    addBand(0.92, -3.95, 16.5, 0.10, 0xf2f6ff, 0.82, "rear_thin_cool_white");
-    addBand(0.18, -4.00, 18.0, 0.42, 0x000000, 0.96, "rear_dark_cut");
-    addBand(-0.72, -3.92, 17.5, 0.14, 0xffffff, 0.88, "rear_lower_white");
-    addBand(-1.42, -3.82, 18.0, 0.28, 0x020202, 0.92, "rear_lower_dark");
+    // Rear-facing studio strips: main readable source.
+    addContinuousBand("main_white_strip", 1.18, -3.90, 22.0, 0.18, 0xffffff, 1.00);
+    addContinuousBand("black_contrast_cut", 0.22, -3.95, 22.0, 0.42, 0x000000, 0.98);
+    addContinuousBand("soft_secondary_highlight", -0.72, -3.88, 20.0, 0.11, 0xeef3ff, 0.72);
+    addContinuousBand("faint_lower_rim", -1.36, -3.82, 18.0, 0.08, 0xffffff, 0.42);
 
-    addBand(1.20, 3.85, 18.0, 0.18, 0xffffff, 0.86, "front_top_white");
-    addBand(0.28, 4.00, 18.0, 0.36, 0x000000, 0.92, "front_dark_cut");
-    addBand(-1.05, 3.85, 17.5, 0.14, 0xffffff, 0.76, "front_lower_white");
-
-    /*
-      A few vertical-side bands, still large and smooth, to stop the chrome becoming flat.
-      They are not random; they behave like studio softboxes.
-    */
-    const leftRig = new THREE.Group();
-    leftRig.rotation.y = Math.PI / 2;
-    leftRig.position.x = -3.75;
-    liveEnvRig.add(leftRig);
-
-    const rightRig = new THREE.Group();
-    rightRig.rotation.y = -Math.PI / 2;
-    rightRig.position.x = 3.75;
-    liveEnvRig.add(rightRig);
-
-    function addSideBand(parent, y, z, width, height, color, opacity) {
-      const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(width, height),
-        new THREE.MeshBasicMaterial({
-          color: color,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: opacity
-        })
-      );
-      strip.position.set(0, y, z);
-      parent.add(strip);
-    }
-
-    addSideBand(leftRig, 0.95, 0, 7.0, 0.16, 0xffffff, 0.72);
-    addSideBand(leftRig, -0.35, 0, 7.0, 0.28, 0x000000, 0.88);
-    addSideBand(rightRig, 1.35, 0, 7.0, 0.14, 0xffffff, 0.66);
-    addSideBand(rightRig, -0.70, 0, 7.0, 0.22, 0x000000, 0.78);
+    // Mirrored soft return strips behind camera, lower opacity, still continuous.
+    addContinuousBand("front_soft_return_white", 1.05, 3.85, 20.0, 0.12, 0xffffff, 0.38);
+    addContinuousBand("front_soft_dark_return", -0.35, 3.95, 22.0, 0.30, 0x000000, 0.52);
 
     liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
       type: THREE.UnsignedByteType,
@@ -7092,8 +7061,8 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149h_smooth_studio_horizontal_light_sweep",
-      lightbarCount: liveEnvRig.children.length,
+      mode: "v150_controlled_studio_strip_rig_y_axis_only",
+      stripCount: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
   }
@@ -7221,13 +7190,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const phase = zaxis.position * 0.00285 + reactive.syntheticPhase + reactive.velocityMemory * 0.0015;
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
-                                /*
-      v149h smooth studio-light sweep:
+                /*
+      v150 controlled studio strip motion:
       - GLB geometry stays still
       - camera stays still
-      - large continuous horizontal bands rotate slowly
-      - scroll speeds up or reverses the sweep
-      - no segmented/random blobs
+      - studio strip rig rotates around Y axis only
+      - no X drift
+      - no Z drift
+      - no per-strip animation
+      - scroll forward accelerates
+      - scroll backward reverses
+      - idle returns to slow forward rotation
     */
     const dt = liveEnvironmentMotion.lastNow
       ? Math.min(0.05, Math.max(0.001, (now - liveEnvironmentMotion.lastNow) / 1000))
@@ -7236,15 +7209,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
 
-    const idleSpeed = 0.052;
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.020, -2.1, 2.1);
+    const idleSpeed = 0.045;
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.018, -1.85, 1.85);
     const targetVelocity = idleSpeed + scrubSpeed;
-    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.16 : 0.028;
+    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.18 : 0.026;
 
     liveEnvironmentMotion.velocity += (targetVelocity - liveEnvironmentMotion.velocity) * smoothing;
     liveEnvironmentMotion.phase += liveEnvironmentMotion.velocity * dt;
-
-    const p = liveEnvironmentMotion.phase;
 
     logoGroup.rotation.x = 0;
     logoGroup.rotation.y = 0;
@@ -7255,13 +7226,8 @@ document.addEventListener('DOMContentLoaded', function () {
     camera.lookAt(0, 0, 0);
 
     if (liveEnvRig && liveEnvCubeCamera && liveEnvScene && liveEnvTarget) {
-      /*
-        Smooth studio orbit:
-        Mostly yaw rotation. A tiny pitch breath prevents dead-flat reflection,
-        but avoids the blob / AI-random look.
-      */
-      liveEnvRig.rotation.y = p;
-      liveEnvRig.rotation.x = Math.sin(p * 0.35) * 0.035;
+      liveEnvRig.rotation.x = 0;
+      liveEnvRig.rotation.y = liveEnvironmentMotion.phase;
       liveEnvRig.rotation.z = 0;
 
       liveEnvCubeCamera.update(renderer, liveEnvScene);
@@ -7271,14 +7237,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
         mat.envMap = liveEnvTarget.texture;
-        mat.envMapIntensity = 7.8 + energy * 0.45;
-        if ("roughness" in mat) mat.roughness = 0.013;
+        mat.envMapIntensity = 7.2 + energy * 0.45;
+        if ("roughness" in mat) mat.roughness = 0.014;
         if ("metalness" in mat) mat.metalness = 1.0;
         mat.needsUpdate = true;
       });
     }
 
-    renderer.toneMappingExposure = 1.82;
+    renderer.toneMappingExposure = 1.80;
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
