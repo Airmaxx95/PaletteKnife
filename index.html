@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g-horizontal-lightbar-orbit" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149h-smooth-studio-light-sweep" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6999,95 +6999,85 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function makeFallbackEnvironment() {
     /*
-      v149g horizontal lightbar orbit:
+      v149h smooth studio-light reflection world:
       Hidden reflection world only.
-      Horizontal black/white bars are arranged around the logo in a cylindrical/ring field.
-      The full ring rotates around the GLB, producing cleaner chrome sweeps.
+      Uses large continuous horizontal luminous bands, not many broken fragments.
+      Aim: smooth studio strip-light sweeps across chrome, not blob-like shapes.
     */
     liveEnvScene = new THREE.Scene();
 
     const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 64, 32),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x050505 })
+      new THREE.SphereGeometry(5, 96, 48),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x030303 })
     );
     liveEnvScene.add(sphere);
 
     liveEnvRig = new THREE.Group();
     liveEnvScene.add(liveEnvRig);
 
-    function seededRandom(seed) {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
+    function addBand(y, z, width, height, color, opacity, sideName) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: opacity
+      });
+
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
+      strip.position.set(0, y, z);
+      if (z > 0) strip.rotation.y = Math.PI;
+
+      strip.userData.pkSideName = sideName || "";
+      liveEnvRig.add(strip);
+      return strip;
     }
 
-    const ringCount = 36;
-    const radius = 3.75;
+    /*
+      Big uninterrupted studio bands.
+      These are deliberately wide so the logo reflects long clean streaks.
+    */
+    addBand(1.55, -3.85, 18.0, 0.20, 0xffffff, 0.98, "rear_top_white");
+    addBand(0.92, -3.95, 16.5, 0.10, 0xf2f6ff, 0.82, "rear_thin_cool_white");
+    addBand(0.18, -4.00, 18.0, 0.42, 0x000000, 0.96, "rear_dark_cut");
+    addBand(-0.72, -3.92, 17.5, 0.14, 0xffffff, 0.88, "rear_lower_white");
+    addBand(-1.42, -3.82, 18.0, 0.28, 0x020202, 0.92, "rear_lower_dark");
 
-    for (let i = 0; i < ringCount; i++) {
-      const r1 = seededRandom(i * 13.17 + 2.1);
-      const r2 = seededRandom(i * 29.91 + 5.4);
-      const r3 = seededRandom(i * 47.33 + 9.8);
-      const r4 = seededRandom(i * 61.71 + 12.6);
+    addBand(1.20, 3.85, 18.0, 0.18, 0xffffff, 0.86, "front_top_white");
+    addBand(0.28, 4.00, 18.0, 0.36, 0x000000, 0.92, "front_dark_cut");
+    addBand(-1.05, 3.85, 17.5, 0.14, 0xffffff, 0.76, "front_lower_white");
 
-      const angle = (i / ringCount) * Math.PI * 2;
-      const width = 2.0 + r1 * 7.8;
-      const height = 0.055 + r2 * 0.24;
-      const color = i % 3 === 0 ? 0x000000 : 0xffffff;
+    /*
+      A few vertical-side bands, still large and smooth, to stop the chrome becoming flat.
+      They are not random; they behave like studio softboxes.
+    */
+    const leftRig = new THREE.Group();
+    leftRig.rotation.y = Math.PI / 2;
+    leftRig.position.x = -3.75;
+    liveEnvRig.add(leftRig);
 
+    const rightRig = new THREE.Group();
+    rightRig.rotation.y = -Math.PI / 2;
+    rightRig.position.x = 3.75;
+    liveEnvRig.add(rightRig);
+
+    function addSideBand(parent, y, z, width, height, color, opacity) {
       const strip = new THREE.Mesh(
         new THREE.PlaneGeometry(width, height),
         new THREE.MeshBasicMaterial({
           color: color,
-          side: THREE.DoubleSide
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: opacity
         })
       );
-
-      // Horizontal bar, placed around a circular environment ring.
-      strip.position.set(
-        Math.sin(angle) * radius,
-        (r3 - 0.5) * 3.6,
-        Math.cos(angle) * radius
-      );
-
-      // Face toward the centre, but keep bar horizontal.
-      strip.lookAt(0, strip.position.y, 0);
-      strip.rotation.z = 0;
-
-      // Slight varied scale but no angled chaos.
-      strip.scale.x = 0.75 + r4 * 0.75;
-
-      liveEnvRig.add(strip);
+      strip.position.set(0, y, z);
+      parent.add(strip);
     }
 
-    // Strong clean anchor bands for readable chrome contours.
-    const anchorRows = [
-      { y: 1.45, color: 0xffffff, h: 0.16, w: 10.5 },
-      { y: 0.55, color: 0xffffff, h: 0.08, w: 8.8 },
-      { y: -0.08, color: 0x000000, h: 0.36, w: 10.8 },
-      { y: -0.92, color: 0xffffff, h: 0.12, w: 9.6 },
-      { y: -1.55, color: 0x000000, h: 0.22, w: 9.8 }
-    ];
-
-    anchorRows.forEach((row, rowIndex) => {
-      const segments = 8;
-      for (let j = 0; j < segments; j++) {
-        const angle = (j / segments) * Math.PI * 2;
-        const strip = new THREE.Mesh(
-          new THREE.PlaneGeometry(row.w, row.h),
-          new THREE.MeshBasicMaterial({ color: row.color, side: THREE.DoubleSide })
-        );
-
-        strip.position.set(
-          Math.sin(angle) * (radius + 0.15 + rowIndex * 0.03),
-          row.y,
-          Math.cos(angle) * (radius + 0.15 + rowIndex * 0.03)
-        );
-
-        strip.lookAt(0, row.y, 0);
-        strip.rotation.z = 0;
-        liveEnvRig.add(strip);
-      }
-    });
+    addSideBand(leftRig, 0.95, 0, 7.0, 0.16, 0xffffff, 0.72);
+    addSideBand(leftRig, -0.35, 0, 7.0, 0.28, 0x000000, 0.88);
+    addSideBand(rightRig, 1.35, 0, 7.0, 0.14, 0xffffff, 0.66);
+    addSideBand(rightRig, -0.70, 0, 7.0, 0.22, 0x000000, 0.78);
 
     liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
       type: THREE.UnsignedByteType,
@@ -7102,7 +7092,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149g_horizontal_lightbar_orbit_loop",
+      mode: "v149h_smooth_studio_horizontal_light_sweep",
       lightbarCount: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
@@ -7231,13 +7221,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const phase = zaxis.position * 0.00285 + reactive.syntheticPhase + reactive.velocityMemory * 0.0015;
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
-                            /*
-      v149g horizontal lightbar orbit:
+                                /*
+      v149h smooth studio-light sweep:
       - GLB geometry stays still
       - camera stays still
-      - horizontal black/white bars orbit around the logo
-      - z-axis scroll speeds up or reverses the orbit
-      - no per-bar chaos, no angled clutter
+      - large continuous horizontal bands rotate slowly
+      - scroll speeds up or reverses the sweep
+      - no segmented/random blobs
     */
     const dt = liveEnvironmentMotion.lastNow
       ? Math.min(0.05, Math.max(0.001, (now - liveEnvironmentMotion.lastNow) / 1000))
@@ -7246,10 +7236,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
 
-    const idleSpeed = 0.105;
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.030, -3.0, 3.0);
+    const idleSpeed = 0.052;
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.020, -2.1, 2.1);
     const targetVelocity = idleSpeed + scrubSpeed;
-    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.24 : 0.04;
+    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.16 : 0.028;
 
     liveEnvironmentMotion.velocity += (targetVelocity - liveEnvironmentMotion.velocity) * smoothing;
     liveEnvironmentMotion.phase += liveEnvironmentMotion.velocity * dt;
@@ -7265,9 +7255,13 @@ document.addEventListener('DOMContentLoaded', function () {
     camera.lookAt(0, 0, 0);
 
     if (liveEnvRig && liveEnvCubeCamera && liveEnvScene && liveEnvTarget) {
-      // Rotate around the GLB. Horizontal rows remain coherent.
+      /*
+        Smooth studio orbit:
+        Mostly yaw rotation. A tiny pitch breath prevents dead-flat reflection,
+        but avoids the blob / AI-random look.
+      */
       liveEnvRig.rotation.y = p;
-      liveEnvRig.rotation.x = Math.sin(p * 0.18) * 0.08;
+      liveEnvRig.rotation.x = Math.sin(p * 0.35) * 0.035;
       liveEnvRig.rotation.z = 0;
 
       liveEnvCubeCamera.update(renderer, liveEnvScene);
@@ -7277,14 +7271,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
         mat.envMap = liveEnvTarget.texture;
-        mat.envMapIntensity = 7.4 + energy * 0.7;
-        if ("roughness" in mat) mat.roughness = 0.011;
+        mat.envMapIntensity = 7.8 + energy * 0.45;
+        if ("roughness" in mat) mat.roughness = 0.013;
         if ("metalness" in mat) mat.metalness = 1.0;
         mat.needsUpdate = true;
       });
     }
 
-    renderer.toneMappingExposure = 1.88;
+    renderer.toneMappingExposure = 1.82;
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
