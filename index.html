@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=150-studio-strip-y-only" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=150b-user-function" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6997,56 +6997,65 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
   function makeFallbackEnvironment() {
-    /*
-      v150 controlled studio strip rig:
-      Hidden reflection world only.
-      Four intentional continuous horizontal bands:
-      1. dominant white strip
-      2. black contrast cut
-      3. soft secondary highlight
-      4. faint rim strip
 
-      No random bars. No segmentation. No per-bar animation.
-    */
     liveEnvScene = new THREE.Scene();
 
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(5, 96, 48),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x050505 })
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x040404 })
     );
     liveEnvScene.add(sphere);
 
     liveEnvRig = new THREE.Group();
     liveEnvScene.add(liveEnvRig);
 
-    function addContinuousBand(name, y, z, width, height, color, opacity) {
-      const mat = new THREE.MeshBasicMaterial({
-        color: color,
-        side: THREE.DoubleSide,
+    // MAIN WALL (OFF-CENTRE)
+    const studioWall = new THREE.Group();
+    studioWall.position.set(1.6, 0, -3.9);
+    studioWall.rotation.y = THREE.MathUtils.degToRad(-15);
+    liveEnvRig.add(studioWall);
+
+    function band(y, w, h, c, o, x) {
+      const m = new THREE.MeshBasicMaterial({
+        color: c,
         transparent: true,
-        opacity: opacity,
-        depthWrite: false
+        opacity: o,
+        side: THREE.DoubleSide
       });
 
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
-      strip.name = name;
-      strip.position.set(0, y, z);
-
-      if (z > 0) strip.rotation.y = Math.PI;
-
-      liveEnvRig.add(strip);
-      return strip;
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+      s.position.set(x || 0, y, 0);
+      studioWall.add(s);
     }
 
-    // Rear-facing studio strips: main readable source.
-    addContinuousBand("main_white_strip", 1.18, -3.90, 22.0, 0.18, 0xffffff, 1.00);
-    addContinuousBand("black_contrast_cut", 0.22, -3.95, 22.0, 0.42, 0x000000, 0.98);
-    addContinuousBand("soft_secondary_highlight", -0.72, -3.88, 20.0, 0.11, 0xeef3ff, 0.72);
-    addContinuousBand("faint_lower_rim", -1.36, -3.82, 18.0, 0.08, 0xffffff, 0.42);
+    // 4 STRIPS (CONTROLLED)
+    band(1.1, 20, 0.18, 0xffffff, 1.0, -0.7);
+    band(0.2, 22, 0.46, 0x000000, 0.98, 0.4);
+    band(-0.7, 17, 0.12, 0xeef3ff, 0.7, -1.2);
+    band(-1.3, 14, 0.08, 0xffffff, 0.45, 1.1);
 
-    // Mirrored soft return strips behind camera, lower opacity, still continuous.
-    addContinuousBand("front_soft_return_white", 1.05, 3.85, 20.0, 0.12, 0xffffff, 0.38);
-    addContinuousBand("front_soft_dark_return", -0.35, 3.95, 22.0, 0.30, 0x000000, 0.52);
+    // DIM RETURN (NOT SYMMETRICAL)
+    const returnWall = new THREE.Group();
+    returnWall.position.set(-2.2, 0, 3.6);
+    returnWall.rotation.y = THREE.MathUtils.degToRad(165);
+    liveEnvRig.add(returnWall);
+
+    function rband(y, w, h, c, o, x) {
+      const s = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({
+          color: c,
+          transparent: true,
+          opacity: o,
+          side: THREE.DoubleSide
+        })
+      );
+      s.position.set(x || 0, y, 0);
+      returnWall.add(s);
+    }
+
+    rband(0.9, 14, 0.1, 0xffffff, 0.22, 0.6);
+    rband(-0.4, 16, 0.28, 0x000000, 0.34, -0.4);
 
     liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
       type: THREE.UnsignedByteType,
@@ -7055,16 +7064,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     liveEnvCubeCamera = new THREE.CubeCamera(0.1, 10, liveEnvTarget);
-    liveEnvCubeCamera.position.set(0, 0, 0);
     liveEnvScene.add(liveEnvCubeCamera);
 
     scene.environment = liveEnvTarget.texture;
-
-    window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v150_controlled_studio_strip_rig_y_axis_only",
-      stripCount: liveEnvRig.children.length,
-      status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
-    };
   }
 
 
@@ -7209,8 +7211,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
 
-    const idleSpeed = 0.045;
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.018, -1.85, 1.85);
+    const idleSpeed = 0.08;
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.025, -1.85, 1.85);
     const targetVelocity = idleSpeed + scrubSpeed;
     const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.18 : 0.026;
 
