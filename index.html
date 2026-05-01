@@ -3632,7 +3632,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149d-true-perpetual-lightbars" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149e-active-reflection-field" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -6999,16 +6999,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function makeFallbackEnvironment() {
     /*
-      v149c random lightbar CubeCamera environment:
-      Hidden reflection world only. It is never directly visible on the page.
-      Randomised bars generate different shapes/sizes/positions so the chrome
-      has a richer and less repetitive environment to reflect.
+      v149e active designed lightbar CubeCamera environment:
+      Hidden reflection world only. It is not visible on the page.
+      More bars, stronger variation, per-bar scale/opacity/drift metadata.
     */
     liveEnvScene = new THREE.Scene();
 
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(5, 64, 32),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x070707 })
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x040404 })
     );
     liveEnvScene.add(sphere);
 
@@ -7020,77 +7019,101 @@ document.addEventListener('DOMContentLoaded', function () {
       return x - Math.floor(x);
     }
 
-    const barCount = 34;
+    const palette = [0xffffff, 0xf4f7ff, 0xdfe8ff, 0x0a0a0a, 0x000000];
+    const barCount = 58;
+
     for (let i = 0; i < barCount; i++) {
-      const r1 = seededRandom(i * 11.13 + 1.7);
-      const r2 = seededRandom(i * 17.71 + 3.1);
-      const r3 = seededRandom(i * 23.97 + 5.4);
-      const r4 = seededRandom(i * 31.41 + 8.8);
-      const r5 = seededRandom(i * 43.19 + 13.2);
-      const r6 = seededRandom(i * 59.91 + 21.6);
-      const r7 = seededRandom(i * 71.77 + 34.4);
+      const r1 = seededRandom(i * 10.137 + 1.71);
+      const r2 = seededRandom(i * 16.817 + 2.37);
+      const r3 = seededRandom(i * 22.913 + 4.91);
+      const r4 = seededRandom(i * 29.331 + 7.43);
+      const r5 = seededRandom(i * 37.777 + 11.19);
+      const r6 = seededRandom(i * 48.219 + 17.77);
+      const r7 = seededRandom(i * 61.371 + 23.41);
+      const r8 = seededRandom(i * 79.713 + 31.13);
 
-      const width = 1.6 + r1 * 8.8;
-      const height = 0.035 + r2 * 0.42;
-      const isLight = r3 > 0.42;
-      const color = isLight ? (r4 > 0.22 ? 0xffffff : 0xe8eefc) : (r4 > 0.45 ? 0x000000 : 0x050505);
+      const wide = r3 > 0.38;
+      const width = wide ? 3.5 + r1 * 8.8 : 0.55 + r1 * 2.7;
+      const height = wide ? 0.025 + r2 * 0.28 : 0.08 + r2 * 1.35;
 
-      const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(width, height),
-        new THREE.MeshBasicMaterial({
-          color: color,
-          side: THREE.DoubleSide
-        })
-      );
+      const color = palette[Math.floor(r4 * palette.length)] || 0xffffff;
+      const mat = new THREE.MeshBasicMaterial({
+        color: color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.55 + r5 * 0.45
+      });
 
-      const front = r5 > 0.5;
-      const zDepth = 2.75 + r6 * 1.35;
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
+
+      const front = r6 > 0.5;
+      const zDepth = 2.45 + r7 * 1.75;
+
       strip.position.set(
-        (r1 - 0.5) * 6.4,
-        (r2 - 0.5) * 4.2,
+        (r1 - 0.5) * 7.8,
+        (r2 - 0.5) * 5.1,
         front ? zDepth : -zDepth
       );
 
       if (front) strip.rotation.y = Math.PI;
-      strip.rotation.z = (r7 - 0.5) * 0.95;
+      strip.rotation.z = (r8 - 0.5) * 1.35;
 
       strip.userData.pkBaseX = strip.position.x;
       strip.userData.pkBaseY = strip.position.y;
       strip.userData.pkBaseZ = strip.position.z;
       strip.userData.pkBaseRotZ = strip.rotation.z;
-      strip.userData.pkSpeed = 0.18 + r5 * 0.74;
-      strip.userData.pkAmpX = 0.45 + r6 * 2.85;
-      strip.userData.pkAmpY = 0.25 + r7 * 1.85;
+      strip.userData.pkBaseOpacity = mat.opacity;
+      strip.userData.pkBaseScaleX = strip.scale.x;
+      strip.userData.pkBaseScaleY = strip.scale.y;
+
+      strip.userData.pkSpeed = 0.45 + r5 * 1.35;
+      strip.userData.pkAmpX = 0.95 + r6 * 3.85;
+      strip.userData.pkAmpY = 0.55 + r7 * 2.45;
+      strip.userData.pkAmpZ = 0.18 + r8 * 0.72;
       strip.userData.pkOffset = r4 * Math.PI * 2;
-      strip.userData.pkAxisMix = r3;
-      strip.userData.pkDrift = (r2 - 0.5) * 0.22;
+      strip.userData.pkSpin = (r2 - 0.5) * 0.75;
+      strip.userData.pkPulse = 0.35 + r3 * 1.45;
+      strip.userData.pkLane = r1 > 0.5 ? 1 : -1;
 
       liveEnvRig.add(strip);
     }
 
-    // A few stable anchor bands stop the reflection becoming visually noisy.
+    // Designed anchor streaks: strong chrome-defining bands that never disappear.
     [
-      { x: 0, y: 1.58, z: -3.8, w: 9.5, h: 0.16, color: 0xffffff, rz: -0.035 },
-      { x: 0, y: -0.12, z: -3.9, w: 9.8, h: 0.34, color: 0x000000, rz: 0.02 },
-      { x: 0, y: -1.36, z: 3.7, w: 9.0, h: 0.18, color: 0xffffff, rz: 0.06 }
+      { x: -0.4, y: 1.78, z: -3.9, w: 10.5, h: 0.12, color: 0xffffff, rz: -0.08, speed: 0.34 },
+      { x: 1.1, y: 1.05, z: -3.7, w: 7.6, h: 0.08, color: 0xf4f7ff, rz: 0.18, speed: 0.42 },
+      { x: -0.7, y: 0.08, z: -4.0, w: 10.8, h: 0.38, color: 0x000000, rz: -0.02, speed: 0.26 },
+      { x: 0.9, y: -0.72, z: -3.6, w: 8.9, h: 0.13, color: 0xffffff, rz: 0.12, speed: 0.52 },
+      { x: -1.2, y: -1.48, z: 3.7, w: 9.6, h: 0.16, color: 0xffffff, rz: -0.18, speed: 0.31 },
+      { x: 0.6, y: -0.42, z: 3.9, w: 10.0, h: 0.32, color: 0x000000, rz: 0.05, speed: 0.24 }
     ].forEach((s, index) => {
-      const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(s.w, s.h),
-        new THREE.MeshBasicMaterial({ color: s.color, side: THREE.DoubleSide })
-      );
+      const mat = new THREE.MeshBasicMaterial({
+        color: s.color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: index === 2 || index === 5 ? 0.92 : 0.86
+      });
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(s.w, s.h), mat);
       strip.position.set(s.x, s.y, s.z);
       if (s.z > 0) strip.rotation.y = Math.PI;
       strip.rotation.z = s.rz;
+
       strip.userData.pkBaseX = strip.position.x;
       strip.userData.pkBaseY = strip.position.y;
       strip.userData.pkBaseZ = strip.position.z;
       strip.userData.pkBaseRotZ = strip.rotation.z;
-      strip.userData.pkSpeed = 0.10 + index * 0.05;
-      strip.userData.pkAmpX = 0.35;
-      strip.userData.pkAmpY = 0.12;
-      strip.userData.pkOffset = index * 1.9;
-      strip.userData.pkAxisMix = 0.5;
-      strip.userData.pkDrift = 0.03;
+      strip.userData.pkBaseOpacity = mat.opacity;
+      strip.userData.pkBaseScaleX = 1;
+      strip.userData.pkBaseScaleY = 1;
+      strip.userData.pkSpeed = s.speed;
+      strip.userData.pkAmpX = 1.25;
+      strip.userData.pkAmpY = 0.38;
+      strip.userData.pkAmpZ = 0.26;
+      strip.userData.pkOffset = index * 1.37;
+      strip.userData.pkSpin = index % 2 ? 0.10 : -0.10;
+      strip.userData.pkPulse = 0.38;
+      strip.userData.pkLane = index % 2 ? 1 : -1;
+
       liveEnvRig.add(strip);
     });
 
@@ -7107,7 +7130,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149d_random_lightbar_cubecamera_true_perpetual_loop",
+      mode: "v149e_active_designed_reflection_field",
       lightbarCount: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
@@ -7236,13 +7259,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const phase = zaxis.position * 0.00285 + reactive.syntheticPhase + reactive.velocityMemory * 0.0015;
     const momentum = Math.tanh(reactive.velocityMemory * 0.034);
 
-                /*
-      v149c random lightbar CubeCamera scrub:
+                    /*
+      v149e active reflection field:
       - GLB geometry stays still
       - camera stays still
-      - hidden bars perpetually scrub forward
-      - z-axis scroll fast-forwards or reverses the scrub
-      - when scroll stops, motion eases back to forward drift
+      - hidden lightbars are always moving
+      - z-axis scroll fast-forwards or reverses the moving field
+      - per-bar motion prevents the lazy/static still-frame look
     */
     const dt = liveEnvironmentMotion.lastNow
       ? Math.min(0.05, Math.max(0.001, (now - liveEnvironmentMotion.lastNow) / 1000))
@@ -7251,26 +7274,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
 
-    /*
-      True perpetual movement:
-      The base clock always advances, even at the first/last slide when z-axis
-      velocity can drop to zero. Scroll adds signed scrub on top of that clock.
-    */
-    const idleSpeed = 0.072;
+    // Two clocks: one never-stopping conveyor, plus scroll scrub offset.
+    const idleSpeed = 0.155;
     liveEnvironmentMotion.clockPhase += idleSpeed * dt;
 
-    // Scroll adds signed control: forward fast-forwards, backward reverses.
-    // Strong reverse scroll can temporarily overpower the forward clock.
-    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.034, -3.6, 3.6);
+    const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.040, -4.4, 4.4);
     const targetVelocity = scrubSpeed;
-
-    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.30 : 0.045;
+    const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.32 : 0.055;
 
     liveEnvironmentMotion.velocity += (targetVelocity - liveEnvironmentMotion.velocity) * smoothing;
-
-    // Final phase = unstoppable forward clock + scroll scrub offset.
     liveEnvironmentMotion.phase += liveEnvironmentMotion.velocity * dt;
-    const lightbarPhase = liveEnvironmentMotion.clockPhase + liveEnvironmentMotion.phase;
+
+    const p = liveEnvironmentMotion.clockPhase + liveEnvironmentMotion.phase;
 
     logoGroup.rotation.x = 0;
     logoGroup.rotation.y = 0;
@@ -7281,28 +7296,38 @@ document.addEventListener('DOMContentLoaded', function () {
     camera.lookAt(0, 0, 0);
 
     if (liveEnvRig && liveEnvCubeCamera && liveEnvScene && liveEnvTarget) {
-      const p = lightbarPhase;
-
-      liveEnvRig.rotation.x = p * 0.34;
-      liveEnvRig.rotation.y = p * 0.20;
-      liveEnvRig.rotation.z = Math.sin(p * 0.19) * 0.08;
+      liveEnvRig.rotation.x = p * 0.18;
+      liveEnvRig.rotation.y = p * 0.10;
+      liveEnvRig.rotation.z = Math.sin(p * 0.13) * 0.045;
 
       liveEnvRig.children.forEach(function (strip, index) {
         const d = strip.userData || {};
-        const local = p * (d.pkSpeed || 0.2) + (d.pkOffset || 0);
+        const speed = d.pkSpeed || 0.5;
+        const local = p * speed + (d.pkOffset || 0);
+        const local2 = p * (speed * 0.63 + 0.17) + index * 0.37;
 
         const baseX = d.pkBaseX || 0;
         const baseY = d.pkBaseY || 0;
         const baseZ = d.pkBaseZ || strip.position.z || -3.5;
-
-        strip.position.x = baseX + Math.sin(local) * (d.pkAmpX || 1);
-        strip.position.y = baseY + Math.cos(local * 0.83 + index * 0.17) * (d.pkAmpY || 0.5);
-
-        // Subtle depth breathing increases changing reflection without showing geometry.
         const zSign = baseZ >= 0 ? 1 : -1;
-        strip.position.z = baseZ + zSign * Math.sin(local * 0.47) * 0.22;
 
-        strip.rotation.z = (d.pkBaseRotZ || 0) + Math.sin(local * 0.31) * 0.18 + p * (d.pkDrift || 0.02);
+        // No stillness: all axes get non-zero drift.
+        strip.position.x = baseX + Math.sin(local) * (d.pkAmpX || 1.5) + Math.sin(local2 * 0.43) * 0.35;
+        strip.position.y = baseY + Math.cos(local * 0.81 + index * 0.19) * (d.pkAmpY || 0.8);
+        strip.position.z = baseZ + zSign * Math.sin(local * 0.52 + index * 0.11) * (d.pkAmpZ || 0.3);
+
+        strip.rotation.z = (d.pkBaseRotZ || 0) + Math.sin(local * 0.37) * 0.38 + p * (d.pkSpin || 0.04);
+
+        // Scale and opacity pulse so the reflected field does not settle into a dead frame.
+        const sx = 1 + Math.sin(local2 * 0.74) * 0.22;
+        const sy = 1 + Math.cos(local * 0.58) * 0.28;
+        strip.scale.set(Math.max(0.25, sx), Math.max(0.18, sy), 1);
+
+        if (strip.material && "opacity" in strip.material) {
+          const baseOpacity = d.pkBaseOpacity || 0.8;
+          strip.material.opacity = Math.max(0.18, Math.min(1, baseOpacity + Math.sin(local2) * (d.pkPulse || 0.3) * 0.22));
+          strip.material.needsUpdate = true;
+        }
       });
 
       liveEnvCubeCamera.update(renderer, liveEnvScene);
@@ -7312,14 +7337,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
         mat.envMap = liveEnvTarget.texture;
-        mat.envMapIntensity = 7.8 + energy * 0.9;
-        if ("roughness" in mat) mat.roughness = 0.011;
+        mat.envMapIntensity = 8.4 + energy * 1.0;
+        if ("roughness" in mat) mat.roughness = 0.009;
         if ("metalness" in mat) mat.metalness = 1.0;
         mat.needsUpdate = true;
       });
     }
 
-    renderer.toneMappingExposure = 1.88;
+    renderer.toneMappingExposure = 1.92;
     renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
