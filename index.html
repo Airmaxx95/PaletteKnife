@@ -3816,6 +3816,16 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g19 — TRANSPARENT GLARE PASS FIX
+   Removes opaque black post-processing background.
+   ========================================================= */
+.site-header .webgl-logo-model,
+.site-header .webgl-logo-canvas {
+  background: transparent !important;
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -3851,7 +3861,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g18-blender-style-glare-pass" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g19-transparent-glare-pass" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -7175,7 +7185,15 @@ document.addEventListener('DOMContentLoaded', function () {
     */
     if (!EffectComposer || !RenderPass || !UnrealBloomPass) return;
 
-    composer = new EffectComposer(renderer);
+    const composerTarget = new THREE.WebGLRenderTarget(width, height, {
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+      depthBuffer: true,
+      stencilBuffer: false
+    });
+    composerTarget.texture.name = "PaletteKnifeTransparentGlareTarget";
+
+    composer = new EffectComposer(renderer, composerTarget);
     composer.setSize(width, height);
     composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.3 : 1.8));
 
@@ -7192,7 +7210,7 @@ document.addEventListener('DOMContentLoaded', function () {
     composer.addPass(bloomPass);
 
     window.PALETTEKNIFE_GLARE_DEBUG = {
-      mode: "v149g18_blender_style_glare_pass",
+      mode: "v149g19_transparent_glare_pass_fix",
       strength: bloomPass.strength,
       radius: bloomPass.radius,
       threshold: bloomPass.threshold
@@ -7371,7 +7389,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149g18_blender_style_glare_pass",
+      mode: "v149g19_transparent_glare_pass_fix",
       reflectionChildren: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
@@ -7407,6 +7425,7 @@ document.addEventListener('DOMContentLoaded', function () {
       setStatus("three_initialising");
       renderer = new THREE.WebGLRenderer({ antialias: true, canvas, alpha: true, antialias: true, powerPreference: "high-performance", premultipliedAlpha: true });
       renderer.setClearColor(0x000000, 0);
+      renderer.autoClear = false;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.7;
@@ -7569,6 +7588,9 @@ document.addEventListener('DOMContentLoaded', function () {
       bloomPass.radius = window.innerWidth <= 768 ? 0.44 : 0.52;
       bloomPass.threshold = window.innerWidth <= 768 ? 0.58 : 0.55;
     }
+
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear(true, true, true);
 
     if (composer) {
       composer.render();
