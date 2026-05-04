@@ -3818,23 +3818,41 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g19 — TRANSPARENT GLARE PASS FIX
-   Removes opaque black post-processing background.
+   v149g22 — ALPHA SAFE GLARE / NO BLACK BUFFER
+   Built from approved v149g16.
+   Removes composer/bloom path entirely.
+   Uses transparent WebGL render + alpha-based CSS glare so no black plate can appear.
    ========================================================= */
-.site-header .webgl-logo-model,
-.site-header .webgl-logo-canvas {
-  background: transparent !important;
-}
 
-
-/* =========================================================
-   v149g21 — TRUE TRANSPARENT GLARE PASS
-   No blend modes. Canvas and model remain transparent.
-   ========================================================= */
 .site-header .webgl-logo-model,
 .site-header .webgl-logo-canvas {
   background: transparent !important;
   mix-blend-mode: normal !important;
+}
+
+.site-header.is-webgl-logo-ready .webgl-logo-canvas {
+  filter:
+    drop-shadow(0 0 1.5px rgba(255,255,255,0.95))
+    drop-shadow(0 0 5px rgba(235,242,255,0.62))
+    drop-shadow(0 0 13px rgba(255,255,255,0.30)) !important;
+  -webkit-filter:
+    drop-shadow(0 0 1.5px rgba(255,255,255,0.95))
+    drop-shadow(0 0 5px rgba(235,242,255,0.62))
+    drop-shadow(0 0 13px rgba(255,255,255,0.30)) !important;
+}
+
+/* Mobile gets slightly stronger glow because the GLB renders smaller. */
+@media (max-width: 768px) {
+  .site-header.is-webgl-logo-ready .webgl-logo-canvas {
+    filter:
+      drop-shadow(0 0 1.5px rgba(255,255,255,1))
+      drop-shadow(0 0 6px rgba(235,242,255,0.68))
+      drop-shadow(0 0 15px rgba(255,255,255,0.34)) !important;
+    -webkit-filter:
+      drop-shadow(0 0 1.5px rgba(255,255,255,1))
+      drop-shadow(0 0 6px rgba(235,242,255,0.68))
+      drop-shadow(0 0 15px rgba(255,255,255,0.34)) !important;
+  }
 }
 
 </style>
@@ -3872,7 +3890,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g21-true-transparent-glare" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g22-alpha-safe-glare" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -7170,8 +7188,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const glbSrc = holder.getAttribute("data-glb-src") || "media/brand/paletteknife_logo.glb?v=147o";
   const envSrc = holder.getAttribute("data-env-src") || "media/brand/studio_small_09.jpg";
 
-  let THREE, GLTFLoader, RGBELoader, DRACOLoader, EffectComposer, RenderPass, UnrealBloomPass;
-  let renderer, scene, camera, logoGroup, pmremGenerator, composer, renderPass, bloomPass;
+  let THREE, GLTFLoader, RGBELoader, DRACOLoader;
+  let renderer, scene, camera, logoGroup, pmremGenerator;
   let liveEnvScene, liveEnvRig, liveEnvCubeCamera, liveEnvTarget;
   const proofChromeMaterials = [];
   const proofEnvironment = { phase: 0, lastNow: 0 };
@@ -7188,53 +7206,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
   const reactive = { scrollEnergy: 0, lastPosition: 0, syntheticPhase: 0, velocityMemory: 0 };
 
-  function setupBlenderStyleGlarePass(width, height) {
-    /*
-      v149g21 true transparent glare pass:
-      RGBA composer target + transparent renderer clear.
-      No CSS blend-mode hacks, so page colours are preserved.
-    */
-    if (!EffectComposer || !RenderPass || !UnrealBloomPass) return;
-
-    const composerTarget = new THREE.WebGLRenderTarget(width, height, {
-      format: THREE.RGBAFormat,
-      type: THREE.UnsignedByteType,
-      depthBuffer: true,
-      stencilBuffer: false,
-      samples: 0
-    });
-    composerTarget.texture.name = "PaletteKnifeTrueTransparentGlareTarget";
-    composerTarget.texture.colorSpace = THREE.SRGBColorSpace;
-
-    composer = new EffectComposer(renderer, composerTarget);
-    composer.setSize(width, height);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.3 : 1.8));
-
-    renderPass = new RenderPass(scene, camera);
-    renderPass.clear = true;
-    renderPass.clearAlpha = 0;
-    composer.addPass(renderPass);
-
-    bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(width, height),
-      window.innerWidth <= 768 ? 0.55 : 0.70,
-      window.innerWidth <= 768 ? 0.44 : 0.52,
-      window.innerWidth <= 768 ? 0.58 : 0.55
-    );
-
-    composer.addPass(bloomPass);
-    composer.renderToScreen = true;
-
-    window.PALETTEKNIFE_GLARE_DEBUG = {
-      mode: "v149g21_true_transparent_glare_pass",
-      strength: bloomPass.strength,
-      radius: bloomPass.radius,
-      threshold: bloomPass.threshold,
-      transparentComposer: true
-    };
-  }
-
-
   function updateHolderSize() {
     if (!holder || !renderer || !camera) return;
     const rect = holder.getBoundingClientRect();
@@ -7242,10 +7213,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const h = Math.max(2, Math.floor(rect.height));
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.5 : 1.8));
     renderer.setSize(w, h, false);
-    if (composer) {
-      composer.setSize(w, h);
-      composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.3 : 1.8));
-    }
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -7407,7 +7374,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149g21_true_transparent_glare_pass",
+      mode: "v149g22_alpha_safe_glare_no_black_buffer",
       reflectionChildren: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
@@ -7421,18 +7388,12 @@ document.addEventListener('DOMContentLoaded', function () {
         import("https://esm.sh/three@0.160.0"),
         import("https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js?deps=three@0.160.0"),
         import("https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js?deps=three@0.160.0"),
-        import("https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js?deps=three@0.160.0"),
-        import("https://esm.sh/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js?deps=three@0.160.0"),
-        import("https://esm.sh/three@0.160.0/examples/jsm/postprocessing/RenderPass.js?deps=three@0.160.0"),
-        import("https://esm.sh/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js?deps=three@0.160.0")
+        import("https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js?deps=three@0.160.0")
       ]);
       THREE = modules[0];
       GLTFLoader = modules[1].GLTFLoader;
       RGBELoader = modules[2].RGBELoader;
       DRACOLoader = modules[3].DRACOLoader;
-      EffectComposer = modules[4].EffectComposer;
-      RenderPass = modules[5].RenderPass;
-      UnrealBloomPass = modules[6].UnrealBloomPass;
     } catch (error) {
       console.warn("PaletteKnife Three.js imports failed", error);
       fallback("three_import_failed");
@@ -7443,8 +7404,6 @@ document.addEventListener('DOMContentLoaded', function () {
       setStatus("three_initialising");
       renderer = new THREE.WebGLRenderer({ antialias: true, canvas, alpha: true, antialias: true, powerPreference: "high-performance", premultipliedAlpha: true });
       renderer.setClearColor(0x000000, 0);
-      renderer.autoClear = true;
-      renderer.autoClear = false;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.7;
@@ -7455,10 +7414,6 @@ document.addEventListener('DOMContentLoaded', function () {
       pmremGenerator = new THREE.PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
       updateHolderSize();
-      setupBlenderStyleGlarePass(
-        Math.max(2, Math.floor(holder.getBoundingClientRect().width)),
-        Math.max(2, Math.floor(holder.getBoundingClientRect().height))
-      );
 
       const ambient = new THREE.AmbientLight(0xffffff, 0.16);
       scene.add(ambient);
@@ -7593,29 +7548,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
         mat.envMap = liveEnvTarget.texture;
-        mat.envMapIntensity = 8.85 + energy * 0.72;
-        if ("roughness" in mat) mat.roughness = 0.008;
+        mat.envMapIntensity = 8.25 + energy * 0.62;
+        if ("roughness" in mat) mat.roughness = 0.009;
         if ("metalness" in mat) mat.metalness = 1.0;
         mat.needsUpdate = true;
       });
     }
 
-    renderer.toneMappingExposure = 1.96;
-    if (bloomPass) {
-      const glareEnergy = Math.min(0.24, energy * 0.14);
-      bloomPass.strength = (window.innerWidth <= 768 ? 0.55 : 0.70) + glareEnergy + Math.sin(t * 0.28) * 0.035;
-      bloomPass.radius = window.innerWidth <= 768 ? 0.44 : 0.52;
-      bloomPass.threshold = window.innerWidth <= 768 ? 0.58 : 0.55;
-    }
-
-    renderer.setClearColor(0x000000, 0);
-    renderer.clear(true, true, true);
-
-    if (composer) {
-      composer.render();
-    } else {
-      renderer.render(scene, camera);
-    }
+    renderer.toneMappingExposure = 1.89;
+    renderer.render(scene, camera);
 
     if (loaded && !firstFrameRendered) {
       firstFrameRendered = true;
