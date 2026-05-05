@@ -54,6 +54,18 @@
 })();
 </script>
 
+
+<script>
+/* v149g50 Safari desktop preload: apply Safari class before CSS paints so the SVG fallback appears instantly in the same box as the GLB. */
+try {
+  var pkUA = navigator.userAgent || "";
+  var pkIsSafariDesktop = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(pkUA) && window.matchMedia && window.matchMedia("(min-width: 769px)").matches;
+  if (pkIsSafariDesktop) {
+    document.documentElement.classList.add("is-safari-desktop-preload", "is-safari-desktop");
+  }
+} catch (e) {}
+</script>
+
 <title>PaletteKnife — Editions & Objects</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
@@ -4646,6 +4658,164 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g50 — SAFARI SINGLE HEADER BOX / EXACT GLB-FALLBACK-GLARE MATCH
+   Recovery from v149g49. Safari desktop only. Chrome untouched.
+
+   Diagnosis fixed here:
+   - Boot SVG was not using the same transformed Safari header box as the ready GLB.
+   - Older glow-mask rules left multiple competing sizing contexts in the cascade.
+   - Final glare must be WebGL-only and share the GLB geometry, not a separate SVG layer.
+   ========================================================= */
+@media (min-width: 769px) {
+  html.is-safari-desktop-preload .site-header,
+  html.is-safari-desktop .site-header {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    top: 18px !important;
+    width: 209.74px !important;
+    height: 61.7px !important;
+    min-width: 209.74px !important;
+    min-height: 61.7px !important;
+    max-width: 209.74px !important;
+    max-height: 61.7px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    animation: none !important;
+    transform: translateX(-50%) scale(1.1) !important;
+    transform-origin: center top !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 100 !important;
+  }
+
+  html.is-safari-desktop-preload .site-header .header-inner,
+  html.is-safari-desktop-preload .site-header .webgl-logo-wrap,
+  html.is-safari-desktop .site-header .header-inner,
+  html.is-safari-desktop .site-header .webgl-logo-wrap {
+    grid-area: 1 / 1 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 209.74px !important;
+    height: 61.7px !important;
+    min-width: 209.74px !important;
+    min-height: 61.7px !important;
+    max-width: 209.74px !important;
+    max-height: 61.7px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+    isolation: isolate !important;
+  }
+
+  html.is-safari-desktop-preload .site-header .webgl-logo-fallback,
+  html.is-safari-desktop-preload .site-header .webgl-logo-model,
+  html.is-safari-desktop .site-header .webgl-logo-fallback,
+  html.is-safari-desktop .site-header .webgl-logo-model {
+    grid-area: 1 / 1 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 209.74px !important;
+    height: 61.7px !important;
+    min-width: 209.74px !important;
+    min-height: 61.7px !important;
+    max-width: 209.74px !important;
+    max-height: 61.7px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+
+  html.is-safari-desktop-preload .site-header .logo-svg,
+  html.is-safari-desktop .site-header .logo-svg {
+    display: block !important;
+    height: 61.7px !important;
+    width: auto !important;
+    max-width: 209.74px !important;
+    max-height: 61.7px !important;
+    object-fit: contain !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+
+  html.is-safari-desktop-preload .site-header .webgl-logo-canvas,
+  html.is-safari-desktop .site-header .webgl-logo-canvas {
+    grid-area: 1 / 1 !important;
+    position: relative !important;
+    width: 209.74px !important;
+    height: 61.7px !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+
+  html.is-safari-desktop-preload .site-header.is-webgl-logo-booting .webgl-logo-fallback,
+  html.is-safari-desktop .site-header.is-webgl-logo-booting .webgl-logo-fallback,
+  html.is-safari-desktop .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: grid !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+  }
+
+  html.is-safari-desktop-preload .site-header.is-webgl-logo-booting .webgl-logo-model,
+  html.is-safari-desktop .site-header.is-webgl-logo-booting .webgl-logo-model,
+  html.is-safari-desktop .site-header.is-webgl-logo-fallback .webgl-logo-model {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: grid !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-model {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: grid !important;
+    z-index: 3 !important;
+    pointer-events: none !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-fallback {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: none !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -4681,7 +4851,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g49-safari-exact-ready-glare-match" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g50-safari-single-box-exact-glare" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo" loading="eager" decoding="sync" fetchpriority="high"></picture>
@@ -8074,70 +8244,30 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!isSafariDesktop || !sourceGroup || !THREE) return null;
 
     /*
-      v149g48:
-      The v149g47 Option A mesh existed but was too faint and depth-tested,
-      so the chrome body swallowed it. This creates a small WebGL glare rig
-      from the exact same GLB geometry: a larger backside halo behind the
-      chrome plus a very light additive face glint. No SVG mask is used.
+      v149g50:
+      Exact-match Safari glare. The glare is no longer scaled larger than
+      the GLB and no longer uses the SVG fallback. It is cloned from the
+      already-fitted GLB group and rendered immediately before the chrome
+      mesh, so it occupies the exact same size and position behind it.
     */
     const glareRig = new THREE.Group();
-    glareRig.name = "paletteknife_safari_geometry_glare_rig";
+    glareRig.name = "paletteknife_safari_exact_geometry_glare_rig";
+    glareRig.position.copy(sourceGroup.position);
+    glareRig.rotation.copy(sourceGroup.rotation);
+    glareRig.scale.copy(sourceGroup.scale);
+    glareRig.renderOrder = -1;
 
-    const haloGroup = sourceGroup.clone(true);
-    haloGroup.name = "paletteknife_safari_geometry_halo";
-    haloGroup.scale.multiplyScalar(1.038);
-    haloGroup.renderOrder = -2;
+    const exactBackGlow = sourceGroup.clone(true);
+    exactBackGlow.name = "paletteknife_safari_exact_back_glare";
+    exactBackGlow.position.set(0, 0, -0.012);
+    exactBackGlow.rotation.set(0, 0, 0);
+    exactBackGlow.scale.set(1, 1, 1);
+    exactBackGlow.renderOrder = -1;
 
-    const haloMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf6fbff,
+    const exactBackMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf8fbff,
       transparent: true,
-      opacity: 0.28,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      depthTest: false,
-      side: THREE.BackSide,
-      toneMapped: false
-    });
-
-    haloGroup.traverse((child) => {
-      if (!child.isMesh) return;
-      child.material = haloMaterial.clone();
-      child.renderOrder = -2;
-      child.frustumCulled = false;
-    });
-
-    const glintGroup = sourceGroup.clone(true);
-    glintGroup.name = "paletteknife_safari_geometry_face_glint";
-    glintGroup.scale.multiplyScalar(1.006);
-    glintGroup.renderOrder = 12;
-
-    const glintMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      depthTest: false,
-      side: THREE.FrontSide,
-      toneMapped: false
-    });
-
-    glintGroup.traverse((child) => {
-      if (!child.isMesh) return;
-      child.material = glintMaterial.clone();
-      child.renderOrder = 12;
-      child.frustumCulled = false;
-    });
-
-    const silverLiftGroup = sourceGroup.clone(true);
-    silverLiftGroup.name = "paletteknife_safari_geometry_silver_lift";
-    silverLiftGroup.scale.multiplyScalar(1.002);
-    silverLiftGroup.renderOrder = 10;
-
-    const silverLiftMaterial = new THREE.MeshBasicMaterial({
-      color: 0xeef4ff,
-      transparent: true,
-      opacity: 0.045,
+      opacity: 0.34,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       depthTest: false,
@@ -8145,16 +8275,40 @@ document.addEventListener('DOMContentLoaded', function () {
       toneMapped: false
     });
 
-    silverLiftGroup.traverse((child) => {
+    exactBackGlow.traverse((child) => {
       if (!child.isMesh) return;
-      child.material = silverLiftMaterial.clone();
-      child.renderOrder = 10;
+      child.material = exactBackMaterial.clone();
+      child.renderOrder = -1;
       child.frustumCulled = false;
     });
 
-    glareRig.add(haloGroup);
-    glareRig.add(silverLiftGroup);
-    glareRig.add(glintGroup);
+    const exactEdgeLift = sourceGroup.clone(true);
+    exactEdgeLift.name = "paletteknife_safari_exact_edge_lift";
+    exactEdgeLift.position.set(0, 0, -0.018);
+    exactEdgeLift.rotation.set(0, 0, 0);
+    exactEdgeLift.scale.set(1, 1, 1);
+    exactEdgeLift.renderOrder = -2;
+
+    const exactEdgeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.16,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+      side: THREE.BackSide,
+      toneMapped: false
+    });
+
+    exactEdgeLift.traverse((child) => {
+      if (!child.isMesh) return;
+      child.material = exactEdgeMaterial.clone();
+      child.renderOrder = -2;
+      child.frustumCulled = false;
+    });
+
+    glareRig.add(exactEdgeLift);
+    glareRig.add(exactBackGlow);
     return glareRig;
   }
 
@@ -8278,7 +8432,7 @@ document.addEventListener('DOMContentLoaded', function () {
     scene.environment = liveEnvTarget.texture;
 
     window.PALETTEKNIFE_CHROME_DEBUG = {
-      mode: "v149g49_safari_exact_ready_glare_match",
+      mode: "v149g50_safari_single_box_exact_glare",
       reflectionChildren: liveEnvRig.children.length,
       status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
     };
