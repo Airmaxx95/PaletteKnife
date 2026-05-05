@@ -3817,17 +3817,17 @@ body.is-booting #panelDesc {
 }
 
 
-
 /* =========================================================
-   v149g17 — INSTANT SVG + SHARED HEADER STAGE + MOBILE THROTTLE FIX
-   Built from v149g16 clean baseline.
-   Scope: header WebGL/SVG loading and mobile performance only.
-   - No glare layer.
-   - SVG/WebP fallback is visible immediately on every browser/device.
-   - SVG fallback and GLB canvas share one exact logo stage.
-   - Mobile GLB uses reduced DPR and non-continuous rendering to prevent throttling.
+   v149g18 — HEADER RECOVERY + MOBILE LIGHTBAR KILL SWITCH
+   Built from v149g16, not from failed v149g17.
+   Scope only:
+   - SVG visible immediately while GLB loads.
+   - Preserve v149g16 GLB sizing/position pipeline.
+   - Move header upward so fallback does not collide with slide title.
+   - Remove mobile lightbar/CubeCamera workload.
    ========================================================= */
 .site-header {
+  top: 8px !important;
   visibility: visible !important;
   opacity: 1 !important;
   animation: none !important;
@@ -3836,78 +3836,78 @@ body.is-booting #panelDesc {
 .site-header.is-ready {
   visibility: visible !important;
   opacity: 1 !important;
-}
-.site-header .webgl-logo-wrap {
-  display: grid !important;
-  place-items: center !important;
-  position: relative !important;
-  line-height: 0 !important;
-  width: 12.8em !important;
-  height: 4.35em !important;
-  max-width: 78vw !important;
-  overflow: visible !important;
-}
-.site-header .webgl-logo-fallback,
-.site-header .webgl-logo-model {
-  grid-area: 1 / 1 !important;
-  position: relative !important;
-  left: auto !important;
-  top: auto !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  transform: none !important;
-  display: grid !important;
-  place-items: center !important;
-  overflow: visible !important;
-}
-.site-header .webgl-logo-model {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: 3 !important;
-  transition: opacity 260ms ease !important;
-}
-.site-header .webgl-logo-canvas {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  background: transparent !important;
-}
-.site-header .webgl-logo-fallback {
-  opacity: 1 !important;
-  visibility: visible !important;
-  z-index: 2 !important;
-  transition: opacity 180ms ease !important;
-}
-.site-header .logo-svg {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  object-fit: contain !important;
-  transform: none !important;
+  animation: none !important;
+  transform: translateX(-50%) translateY(0) !important;
 }
 .site-header.is-webgl-logo-booting .webgl-logo-fallback,
 .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
   opacity: 1 !important;
+  visibility: visible !important;
 }
 .site-header.is-webgl-logo-booting .webgl-logo-model,
 .site-header.is-webgl-logo-fallback .webgl-logo-model {
   opacity: 0 !important;
 }
-.site-header.is-webgl-logo-ready .webgl-logo-model {
-  opacity: 1 !important;
-  filter: contrast(1.16) brightness(1.10) saturate(0.86) !important;
+/* Desktop: restore v149g16 sizing; do not use the failed fixed stage from v149g17. */
+@media (min-width: 769px) {
+  .site-header .webgl-logo-wrap {
+    width: max-content !important;
+    height: auto !important;
+    max-width: none !important;
+    display: inline-grid !important;
+    place-items: center !important;
+  }
+  .site-header .webgl-logo-fallback {
+    width: max-content !important;
+    height: auto !important;
+  }
+  .site-header .logo-svg {
+    width: auto !important;
+    height: 3em !important;
+    max-width: none !important;
+    object-fit: contain !important;
+  }
+  .site-header .webgl-logo-model {
+    width: 100% !important;
+    height: 3.6em !important;
+    max-width: none !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
 }
-.site-header.is-webgl-logo-ready .webgl-logo-fallback {
-  opacity: 0 !important;
-  visibility: visible !important;
+@media (max-width: 768px) {
+  .site-header {
+    top: 10px !important;
+  }
+  .site-header .webgl-logo-wrap,
+  .site-header .webgl-logo-fallback,
+  .site-header .webgl-logo-model {
+    width: 12.8em !important;
+    height: 4.35em !important;
+    max-width: 78vw !important;
+    aspect-ratio: 12.8 / 4.35 !important;
+  }
+  .site-header .logo-svg {
+    height: 3.35em !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+  }
 }
 @media (max-width: 480px) {
-  .site-header .webgl-logo-wrap {
+  .site-header {
+    top: 8px !important;
+  }
+  .site-header .webgl-logo-wrap,
+  .site-header .webgl-logo-fallback,
+  .site-header .webgl-logo-model {
     width: 12.2em !important;
     height: 4.15em !important;
     max-width: 78vw !important;
+    aspect-ratio: 12.2 / 4.15 !important;
+  }
+  .site-header .logo-svg {
+    height: 3.25em !important;
   }
 }
 
@@ -3946,10 +3946,10 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g17-instant-svg-throttle" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g16-mobile-hires" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
-<picture class="webgl-logo-fallback"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo" decoding="sync" fetchpriority="high"></picture>
+<picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
     </div>
   </div>
 </header>
@@ -7258,7 +7258,6 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   let loaded = false;
   let firstFrameRendered = false;
-  let mobileStaticFramesRemaining = 0;
   const isMobileHeaderWebGL = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
 
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
@@ -7269,7 +7268,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const rect = holder.getBoundingClientRect();
     const w = Math.max(2, Math.floor(rect.width));
     const h = Math.max(2, Math.floor(rect.height));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileHeaderWebGL ? 1.15 : 1.8));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileHeaderWebGL ? 1 : 1.8));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -7300,10 +7299,18 @@ document.addEventListener('DOMContentLoaded', function () {
       const materials = Array.isArray(child.material) ? child.material : [child.material];
 
       materials.forEach((mat) => {
-        if ("metalness" in mat) mat.metalness = 1.0;
-        if ("roughness" in mat) mat.roughness = 0.018;
-        if ("color" in mat) mat.color = new THREE.Color(0xf6f7f8);
-        mat.envMapIntensity = 6.0;
+        if (isMobileHeaderWebGL) {
+          /* Mobile performance mode: no live lightbar reflections. Keep a readable static silver material. */
+          if ("metalness" in mat) mat.metalness = 0.42;
+          if ("roughness" in mat) mat.roughness = 0.20;
+          if ("color" in mat) mat.color = new THREE.Color(0xf7f7f7);
+          mat.envMapIntensity = 0.0;
+        } else {
+          if ("metalness" in mat) mat.metalness = 1.0;
+          if ("roughness" in mat) mat.roughness = 0.018;
+          if ("color" in mat) mat.color = new THREE.Color(0xf6f7f8);
+          mat.envMapIntensity = 6.0;
+        }
         mat.needsUpdate = true;
         proofChromeMaterials.push(mat);
       });
@@ -7314,6 +7321,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
   function makeFallbackEnvironment() {
+    if (isMobileHeaderWebGL) {
+      /* Mobile: completely skip the hidden lightbar/CubeCamera rig. This removes the suspected throttling source instead of merely lowering resolution. */
+      liveEnvScene = null;
+      liveEnvRig = null;
+      liveEnvCubeCamera = null;
+      liveEnvTarget = null;
+      scene.environment = null;
+      window.PALETTEKNIFE_CHROME_DEBUG = {
+        mode: "v149g18_mobile_lightbars_disabled",
+        reflectionChildren: 0,
+        status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
+      };
+      return;
+    }
     /*
       v149g5 balanced tonal orbit bands:
       Hidden CubeCamera reflection world only.
@@ -7419,7 +7440,7 @@ document.addEventListener('DOMContentLoaded', function () {
     floorFill.rotation.x = Math.PI / 2;
     liveEnvRig.add(floorFill);
 
-    liveEnvTarget = new THREE.WebGLCubeRenderTarget(isMobileHeaderWebGL ? 128 : 512, {
+    liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
       type: THREE.UnsignedByteType,
       generateMipmaps: true,
       minFilter: THREE.LinearMipmapLinearFilter
@@ -7486,8 +7507,10 @@ document.addEventListener('DOMContentLoaded', function () {
       makeFallbackEnvironment();
       if (liveEnvCubeCamera && liveEnvScene) {
         liveEnvCubeCamera.update(renderer, liveEnvScene);
+        setStatus("live_cube_environment_loaded");
+      } else {
+        setStatus("mobile_static_environment_no_lightbars");
       }
-      setStatus("live_cube_environment_loaded");
 
       setStatus("loading_glb_draco");
       const dracoLoader = new DRACOLoader();
@@ -7504,15 +7527,11 @@ document.addEventListener('DOMContentLoaded', function () {
       fitObjectToView(logoGroup);
       scene.add(logoGroup);
       loaded = true;
-      mobileStaticFramesRemaining = isMobileHeaderWebGL ? 18 : 0;
       setStatus("three_ready_loaded");
 
       window.addEventListener("resize", function () {
         updateHolderSize();
-        if (isMobileHeaderWebGL && renderer && scene && camera) {
-          mobileStaticFramesRemaining = 4;
-          requestAnimationFrame(animate);
-        }
+        if (isMobileHeaderWebGL) animate(performance.now());
       }, { passive: true });
       animate(performance.now());
     } catch (error) {
@@ -7560,13 +7579,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { passive: true });
 
   function animate(now) {
+    requestAnimationFrame(animate);
     if (!renderer || !scene || !camera || !logoGroup) return;
-    if (!isMobileHeaderWebGL) {
-      requestAnimationFrame(animate);
-    } else if (mobileStaticFramesRemaining > 0) {
-      mobileStaticFramesRemaining -= 1;
-      requestAnimationFrame(animate);
-    }
 
     reactive.scrollEnergy *= 0.925;
     reactive.velocityMemory *= 0.91;
@@ -7590,9 +7604,9 @@ document.addEventListener('DOMContentLoaded', function () {
       : 0.016;
     liveEnvironmentMotion.lastNow = now;
 
-    const scrollDrive = isMobileHeaderWebGL ? 0 : (zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory);
+    const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
 
-    const idleSpeed = isMobileHeaderWebGL ? 0 : 0.064;
+    const idleSpeed = 0.064;
     const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.036, -3.15, 3.15);
     const targetVelocity = idleSpeed + scrubSpeed;
     const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.24 : 0.032;
@@ -7615,10 +7629,8 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvRig.rotation.y = p;
       liveEnvRig.rotation.z = 0;
 
-      if (!isMobileHeaderWebGL || !firstFrameRendered) {
-        liveEnvCubeCamera.update(renderer, liveEnvScene);
-        scene.environment = liveEnvTarget.texture;
-      }
+      liveEnvCubeCamera.update(renderer, liveEnvScene);
+      scene.environment = liveEnvTarget.texture;
     }
 
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
