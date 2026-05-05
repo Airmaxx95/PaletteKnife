@@ -4054,10 +4054,14 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g38 — SAFARI GLB GLOW RESTORE
-   Built from v149g37.
-   Safari desktop only.
-   Chrome untouched. Mobile untouched.
+   v149g39 — SAFARI IMPORTMAP THREE FIX + GLOW
+   Chrome desktop untouched.
+   Safari desktop:
+   - unpkg modules
+   - importmap resolves bare "three"
+   - approved size/position retained
+   - alpha-safe glow restored
+   Mobile untouched.
    ========================================================= */
 
 @media (min-width: 769px) {
@@ -4127,7 +4131,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g38-safari-glb-glow-restore" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g39-safari-importmap-three-fix" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -7383,6 +7387,15 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
 <script type="module">
 (function () {
   const DESKTOP_MIN_WIDTH = 0;
@@ -7643,14 +7656,14 @@ document.addEventListener('DOMContentLoaded', function () {
       */
       moduleUrls = isSafariDesktop ? [
         /*
-          v149g37:
-          Safari cannot resolve bare imports like "three" from unpkg example modules.
-          jsDelivr +esm rewrites/bundles dependencies so Safari receives valid absolute module URLs.
+          v149g39:
+          Safari uses unpkg ESM modules + importmap for bare "three" resolution.
+          This avoids jsDelivr +esm 404 rewrites and avoids Safari bare import failure.
         */
-        "https://cdn.jsdelivr.net/npm/three@0.160.0/+esm",
-        "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js/+esm",
-        "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/RGBELoader.js/+esm",
-        "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/DRACOLoader.js/+esm"
+        "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
+        "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js",
+        "https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js"
       ] : [
         "https://esm.sh/three@0.160.0",
         "https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js?deps=three@0.160.0",
