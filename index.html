@@ -4087,7 +4087,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g35-safari-three-import-fix" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g36-safari-moduleurls-scope-fix" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
@@ -7413,6 +7413,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   let loaded = false;
   let firstFrameRendered = false;
+  let moduleUrls = [];
 
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
   const reactive = { scrollEnergy: 0, lastPosition: 0, syntheticPhase: 0, velocityMemory: 0 };
@@ -7600,7 +7601,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Chrome keeps the approved esm.sh import path.
         Safari desktop uses unpkg ESM modules because Safari was failing the esm.sh module script import.
       */
-      const moduleUrls = isSafariDesktop ? [
+      moduleUrls = isSafariDesktop ? [
         "https://unpkg.com/three@0.160.0/build/three.module.js",
         "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
         "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js",
@@ -7618,7 +7619,7 @@ document.addEventListener('DOMContentLoaded', function () {
       RGBELoader = modules[2].RGBELoader;
       DRACOLoader = modules[3].DRACOLoader;
     } catch (error) {
-      console.warn("PaletteKnife Three.js imports failed", error, { isSafariDesktop, moduleUrls });
+      console.warn("PaletteKnife Three.js imports failed", error, { isSafariDesktop, moduleUrls: moduleUrls || [] });
       fallback("three_import_failed");
       return;
     }
