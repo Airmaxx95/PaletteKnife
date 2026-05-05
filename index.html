@@ -4052,6 +4052,46 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g38 — SAFARI GLB GLOW RESTORE
+   Built from v149g37.
+   Safari desktop only.
+   Chrome untouched. Mobile untouched.
+   ========================================================= */
+
+@media (min-width: 769px) {
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-model,
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-canvas {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    background: transparent !important;
+    mix-blend-mode: normal !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-canvas {
+    filter:
+      brightness(1.08)
+      contrast(1.10)
+      drop-shadow(0 0 1.6px rgba(255,255,255,1))
+      drop-shadow(0 0 6px rgba(235,242,255,0.76))
+      drop-shadow(0 0 15px rgba(255,255,255,0.38)) !important;
+    -webkit-filter:
+      brightness(1.08)
+      contrast(1.10)
+      drop-shadow(0 0 1.6px rgba(255,255,255,1))
+      drop-shadow(0 0 6px rgba(235,242,255,0.76))
+      drop-shadow(0 0 15px rgba(255,255,255,0.38)) !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-fallback {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -4087,7 +4127,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g37-safari-bundled-module-imports" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g38-safari-glb-glow-restore" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
