@@ -3816,6 +3816,101 @@ body.is-booting #panelDesc {
   }
 }
 
+
+
+/* =========================================================
+   v149g17 — INSTANT SVG + SHARED HEADER STAGE + MOBILE THROTTLE FIX
+   Built from v149g16 clean baseline.
+   Scope: header WebGL/SVG loading and mobile performance only.
+   - No glare layer.
+   - SVG/WebP fallback is visible immediately on every browser/device.
+   - SVG fallback and GLB canvas share one exact logo stage.
+   - Mobile GLB uses reduced DPR and non-continuous rendering to prevent throttling.
+   ========================================================= */
+.site-header {
+  visibility: visible !important;
+  opacity: 1 !important;
+  animation: none !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+.site-header.is-ready {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.site-header .webgl-logo-wrap {
+  display: grid !important;
+  place-items: center !important;
+  position: relative !important;
+  line-height: 0 !important;
+  width: 12.8em !important;
+  height: 4.35em !important;
+  max-width: 78vw !important;
+  overflow: visible !important;
+}
+.site-header .webgl-logo-fallback,
+.site-header .webgl-logo-model {
+  grid-area: 1 / 1 !important;
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: visible !important;
+}
+.site-header .webgl-logo-model {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: 3 !important;
+  transition: opacity 260ms ease !important;
+}
+.site-header .webgl-logo-canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+.site-header .webgl-logo-fallback {
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 2 !important;
+  transition: opacity 180ms ease !important;
+}
+.site-header .logo-svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+.site-header.is-webgl-logo-booting .webgl-logo-fallback,
+.site-header.is-webgl-logo-fallback .webgl-logo-fallback {
+  opacity: 1 !important;
+}
+.site-header.is-webgl-logo-booting .webgl-logo-model,
+.site-header.is-webgl-logo-fallback .webgl-logo-model {
+  opacity: 0 !important;
+}
+.site-header.is-webgl-logo-ready .webgl-logo-model {
+  opacity: 1 !important;
+  filter: contrast(1.16) brightness(1.10) saturate(0.86) !important;
+}
+.site-header.is-webgl-logo-ready .webgl-logo-fallback {
+  opacity: 0 !important;
+  visibility: visible !important;
+}
+@media (max-width: 480px) {
+  .site-header .webgl-logo-wrap {
+    width: 12.2em !important;
+    height: 4.15em !important;
+    max-width: 78vw !important;
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -3851,10 +3946,10 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g16-mobile-hires" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g17-instant-svg-throttle" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
-<picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
+<picture class="webgl-logo-fallback"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo" decoding="sync" fetchpriority="high"></picture>
     </div>
   </div>
 </header>
@@ -7163,6 +7258,8 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   let loaded = false;
   let firstFrameRendered = false;
+  let mobileStaticFramesRemaining = 0;
+  const isMobileHeaderWebGL = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
 
   const zaxis = { position: 0, velocity: 0, targetVelocity: 0 };
   const reactive = { scrollEnergy: 0, lastPosition: 0, syntheticPhase: 0, velocityMemory: 0 };
@@ -7172,7 +7269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const rect = holder.getBoundingClientRect();
     const w = Math.max(2, Math.floor(rect.width));
     const h = Math.max(2, Math.floor(rect.height));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.5 : 1.8));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileHeaderWebGL ? 1.15 : 1.8));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -7322,7 +7419,7 @@ document.addEventListener('DOMContentLoaded', function () {
     floorFill.rotation.x = Math.PI / 2;
     liveEnvRig.add(floorFill);
 
-    liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
+    liveEnvTarget = new THREE.WebGLCubeRenderTarget(isMobileHeaderWebGL ? 128 : 512, {
       type: THREE.UnsignedByteType,
       generateMipmaps: true,
       minFilter: THREE.LinearMipmapLinearFilter
@@ -7363,7 +7460,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     try {
       setStatus("three_initialising");
-      renderer = new THREE.WebGLRenderer({ antialias: true, canvas, alpha: true, antialias: true, powerPreference: "high-performance", premultipliedAlpha: true });
+      renderer = new THREE.WebGLRenderer({ antialias: !isMobileHeaderWebGL, canvas, alpha: true, powerPreference: isMobileHeaderWebGL ? "low-power" : "high-performance", premultipliedAlpha: true });
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -7407,9 +7504,16 @@ document.addEventListener('DOMContentLoaded', function () {
       fitObjectToView(logoGroup);
       scene.add(logoGroup);
       loaded = true;
+      mobileStaticFramesRemaining = isMobileHeaderWebGL ? 18 : 0;
       setStatus("three_ready_loaded");
 
-      window.addEventListener("resize", updateHolderSize, { passive: true });
+      window.addEventListener("resize", function () {
+        updateHolderSize();
+        if (isMobileHeaderWebGL && renderer && scene && camera) {
+          mobileStaticFramesRemaining = 4;
+          requestAnimationFrame(animate);
+        }
+      }, { passive: true });
       animate(performance.now());
     } catch (error) {
       console.warn("PaletteKnife Three.js DRACO GLB renderer failed", error);
@@ -7418,6 +7522,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   window.addEventListener("paletteknife:zaxis", function (event) {
+    if (isMobileHeaderWebGL) return;
     if (!event.detail) return;
     const nextPosition = Number(event.detail.position || 0);
     const rawVelocity = Number(event.detail.velocity || 0) + Number(event.detail.targetVelocity || 0);
@@ -7431,6 +7536,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { passive: true });
 
   window.addEventListener("wheel", function (event) {
+    if (isMobileHeaderWebGL) return;
     reactive.scrollEnergy = Math.min(1.45, reactive.scrollEnergy + Math.min(0.30, Math.abs(event.deltaY) * 0.0020));
     reactive.syntheticPhase += event.deltaY * 0.00115;
     reactive.velocityMemory = reactive.velocityMemory * 0.84 + event.deltaY * 0.016;
@@ -7438,10 +7544,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let touchY = null;
   window.addEventListener("touchstart", function (event) {
+    if (isMobileHeaderWebGL) return;
     if (event.touches && event.touches.length) touchY = event.touches[0].clientY;
   }, { passive: true });
 
   window.addEventListener("touchmove", function (event) {
+    if (isMobileHeaderWebGL) return;
     if (!event.touches || !event.touches.length || touchY === null) return;
     const y = event.touches[0].clientY;
     const dy = touchY - y;
@@ -7452,8 +7560,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { passive: true });
 
   function animate(now) {
-    requestAnimationFrame(animate);
     if (!renderer || !scene || !camera || !logoGroup) return;
+    if (!isMobileHeaderWebGL) {
+      requestAnimationFrame(animate);
+    } else if (mobileStaticFramesRemaining > 0) {
+      mobileStaticFramesRemaining -= 1;
+      requestAnimationFrame(animate);
+    }
 
     reactive.scrollEnergy *= 0.925;
     reactive.velocityMemory *= 0.91;
@@ -7477,9 +7590,9 @@ document.addEventListener('DOMContentLoaded', function () {
       : 0.016;
     liveEnvironmentMotion.lastNow = now;
 
-    const scrollDrive = zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory;
+    const scrollDrive = isMobileHeaderWebGL ? 0 : (zaxis.velocity + zaxis.targetVelocity + reactive.velocityMemory);
 
-    const idleSpeed = 0.064;
+    const idleSpeed = isMobileHeaderWebGL ? 0 : 0.064;
     const scrubSpeed = THREE.MathUtils.clamp(scrollDrive * 0.036, -3.15, 3.15);
     const targetVelocity = idleSpeed + scrubSpeed;
     const smoothing = Math.abs(scrollDrive) > 0.08 ? 0.24 : 0.032;
@@ -7502,8 +7615,10 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvRig.rotation.y = p;
       liveEnvRig.rotation.z = 0;
 
-      liveEnvCubeCamera.update(renderer, liveEnvScene);
-      scene.environment = liveEnvTarget.texture;
+      if (!isMobileHeaderWebGL || !firstFrameRendered) {
+        liveEnvCubeCamera.update(renderer, liveEnvScene);
+        scene.environment = liveEnvTarget.texture;
+      }
     }
 
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
