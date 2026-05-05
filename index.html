@@ -4172,6 +4172,75 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g42 — SAFARI GLOW MASK ALIGNMENT
+   Built from v149g41.
+   Safari desktop only.
+   Keeps GLB visible and re-aligns the SVG glow-mask layer to the GLB.
+   Chrome untouched. Mobile untouched.
+   ========================================================= */
+
+@media (min-width: 769px) {
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-wrap {
+    position: relative !important;
+    isolation: isolate !important;
+    overflow: visible !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-model,
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-canvas {
+    position: relative !important;
+    z-index: 3 !important;
+    transform: none !important;
+  }
+
+  /* Glow mask calibration:
+     The SVG mask was visible but sitting too high/off compared with the Safari GLB.
+     This lowers it slightly and trims scale so the glow hugs the GLB strokes. */
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-fallback {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    inset: auto !important;
+    width: 209.74px !important;
+    height: 61.7px !important;
+    z-index: 2 !important;
+    opacity: 0.68 !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+    display: grid !important;
+    place-items: center !important;
+    background: transparent !important;
+    mix-blend-mode: normal !important;
+    transform: translate(-50%, -50%) translate(-1px, 3px) scale(0.965) !important;
+    transform-origin: center center !important;
+    filter:
+      brightness(0)
+      invert(1)
+      drop-shadow(0 0 1.8px rgba(255,255,255,1))
+      drop-shadow(0 0 7px rgba(235,242,255,0.78))
+      drop-shadow(0 0 16px rgba(255,255,255,0.38))
+      drop-shadow(0 0 28px rgba(210,226,255,0.18)) !important;
+    -webkit-filter:
+      brightness(0)
+      invert(1)
+      drop-shadow(0 0 1.8px rgba(255,255,255,1))
+      drop-shadow(0 0 7px rgba(235,242,255,0.78))
+      drop-shadow(0 0 16px rgba(255,255,255,0.38))
+      drop-shadow(0 0 28px rgba(210,226,255,0.18)) !important;
+  }
+
+  html.is-safari-desktop .site-header.is-webgl-logo-ready .webgl-logo-fallback .logo-svg {
+    height: 61.7px !important;
+    width: auto !important;
+    max-width: 209.74px !important;
+    opacity: 0.96 !important;
+    transform: none !important;
+    margin: 0 !important;
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -4207,7 +4276,7 @@ body.is-booting #panelDesc {
 <header class="site-header is-webgl-logo-booting" id="siteHeader">
   <div class="header-inner">
     <div class="logo webgl-logo-wrap" aria-label="PaletteKnife">
-      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g41-safari-svg-glow-mask-layer" data-env-src="media/brand/studio_small_09.jpg">
+      <div id="webglLogoModel" class="webgl-logo-model" aria-hidden="true" data-glb-src="media/brand/paletteknife_logo.glb?v=149g42-safari-glow-mask-align" data-env-src="media/brand/studio_small_09.jpg">
         <canvas id="webglLogoCanvas" class="webgl-logo-canvas"></canvas>
       </div>
 <picture class="webgl-logo-fallback"><source srcset="media/brand/logo.webp" type="image/webp"><img src="media/brand/logo.svg" alt="PaletteKnife" class="logo-svg" id="siteHeaderLogo"></picture>
