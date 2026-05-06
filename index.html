@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g41 iOS 26 overlay group test 2
+PaletteKnife v149g42 iOS 26 overlay group test 3
 Source: v149g25_restore_approved_safari_glb_background_5f5b61
 Desktop: untouched
 Z-axis: untouched
 Card blur: untouched
 Viewport alpha mask: retained/restored
-Mobile test: header + footer + footer panels visible; panel/nav/cart/title/meta hidden.
+Mobile test: title + left meta restored; product panel/nav/cart/detached CTA hidden.
 -->
 <html lang="en">
 <head>
@@ -4008,19 +4008,18 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g41 — iOS 26 MOBILE OVERLAY GROUP TEST 2
+   v149g42 — iOS 26 MOBILE OVERLAY GROUP TEST 3
    Built from approved v149g25.
    Desktop untouched.
    Z-axis untouched.
    Card blur untouched.
    iPhone viewport alpha mask retained/restored.
-   v149g40 result: header + footer visible = smooth, but footer panels/header function over-hidden.
-   Test: restore header + footer + footer panels; keep product panel/nav/cart/title/meta hidden.
+   v149g41 result: header/footer/footer-panels smooth.
+   Test: restore slide title + left meta only.
+   Keep product panel/nav/cart/detached CTA hidden.
    ========================================================= */
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 900px), (pointer: coarse), (hover: none) {
-    .slide-title-display,
-    .left-meta,
     .panel,
     .panel-actions-mobile-detached,
     .nav-panel,
