@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g44 iOS 26 overlay group test 5
+PaletteKnife v149g45 iOS 26 title DOM-write fix
 Source: v149g25_restore_approved_safari_glb_background_5f5b61
 Desktop: untouched
 Z-axis: untouched
 Card blur: untouched
 Viewport alpha mask: retained/restored
-Mobile test: left meta only restored; slide title/product panel/nav/cart/detached CTA hidden.
+Change: title DOM/text/opacity writes are cached to avoid per-frame fixed overlay churn on iOS 26.
 -->
 <html lang="en">
 <head>
@@ -4006,39 +4006,6 @@ body.is-booting #panelDesc {
   }
 }
 
-
-/* =========================================================
-   v149g44 — iOS 26 MOBILE OVERLAY GROUP TEST 5
-   Built from approved v149g25.
-   Desktop untouched.
-   Z-axis untouched.
-   Card blur untouched.
-   iPhone viewport alpha mask retained/restored.
-   v149g43 result: slide title only restored = lag.
-   Test: restore left meta only; hide slide title and heavy overlay stack.
-   ========================================================= */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 900px), (pointer: coarse), (hover: none) {
-    .slide-title-display,
-    .panel,
-    .panel-actions-mobile-detached,
-    .nav-panel,
-    .cart-toggle,
-    .cart-drawer {
-      display: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-      animation: none !important;
-      transition: none !important;
-      -webkit-backdrop-filter: none !important;
-      backdrop-filter: none !important;
-      filter: none !important;
-      -webkit-filter: none !important;
-    }
-  }
-}
-
 </style>
 
 <script type="application/ld+json">
@@ -6520,6 +6487,12 @@ body.is-booting #panelDesc {
     return nearAnchor && settled;
   }
 
+  let lastRenderedSlideTitleIndex = -1;
+  let lastRenderedSlideTitleText = "";
+  let lastRenderedSlideTitleSlug = "";
+  let lastRenderedSlideTitleVisible = null;
+  let lastRenderedLeftMetaVisible = null;
+
   function renderSlideTitle() {
     if (!slideTitleDisplay) return;
 
@@ -6527,15 +6500,48 @@ body.is-booting #panelDesc {
     const title = String((product && product.title) || "").trim();
     const slug = String((product && product.slug) || "").trim();
     const showMeta = shouldShowCenteredTitle();
+    const nextTitleVisible = showMeta ? "1" : "0";
+    const nextLeftMetaVisible = showMeta ? "1" : "0";
 
-    if (slideTitleText) slideTitleText.textContent = title;
-    if (slideTitleSlug) {
-      slideTitleSlug.textContent = slug;
-      slideTitleSlug.style.display = slug ? "block" : "none";
+    /*
+      v149g45 iOS 26 fix:
+      Keep the title feature visually intact, but avoid rewriting fixed overlay text
+      and opacity every z-axis animation frame. Safari/iOS 26 appears to throttle
+      when this fixed title layer churns while blurred 3D slides are moving.
+    */
+    if (
+      currentCenteredIndex !== lastRenderedSlideTitleIndex ||
+      title !== lastRenderedSlideTitleText ||
+      slug !== lastRenderedSlideTitleSlug
+    ) {
+      if (slideTitleText && slideTitleText.textContent !== title) {
+        slideTitleText.textContent = title;
+      }
+
+      if (slideTitleSlug) {
+        if (slideTitleSlug.textContent !== slug) {
+          slideTitleSlug.textContent = slug;
+        }
+        const nextSlugDisplay = slug ? "block" : "none";
+        if (slideTitleSlug.style.display !== nextSlugDisplay) {
+          slideTitleSlug.style.display = nextSlugDisplay;
+        }
+      }
+
+      lastRenderedSlideTitleIndex = currentCenteredIndex;
+      lastRenderedSlideTitleText = title;
+      lastRenderedSlideTitleSlug = slug;
     }
 
-    slideTitleDisplay.style.opacity = showMeta ? "1" : "0";
-    if (leftMeta) leftMeta.style.opacity = showMeta ? "1" : "0";
+    if (lastRenderedSlideTitleVisible !== nextTitleVisible) {
+      slideTitleDisplay.style.opacity = nextTitleVisible;
+      lastRenderedSlideTitleVisible = nextTitleVisible;
+    }
+
+    if (leftMeta && lastRenderedLeftMetaVisible !== nextLeftMetaVisible) {
+      leftMeta.style.opacity = nextLeftMetaVisible;
+      lastRenderedLeftMetaVisible = nextLeftMetaVisible;
+    }
   }
 
   function renderAll() {
