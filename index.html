@@ -7310,11 +7310,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   window.PALETTEKNIFE_MOBILE_WEBGL_DIAGNOSTIC = {
-    build: "v149g28",
+    build: "v149g29",
     source: "v149g25_restore_approved_safari_glb_background_5f5b61",
     zAxisTouched: false,
-    mobileLightbarsDisabled: true,
-    mobileHeaderWebGLDisabled: true
+    mobileCubeCameraDisabled: true,
+    mobileDynamicEnvironmentDisabled: true
   };
 
   function isTouchOrMobileHeader() {
@@ -7329,7 +7329,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_lightbars_webgl_hard_disabled_zaxis_untouched" };
+    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_cubecamera_dynamic_env_disabled_zaxis_untouched" };
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
       const c = document.createElement("canvas");
@@ -7355,7 +7355,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const capability = canUseWebGL();
   if (!capability.ok) {
-    if (holder && /mobile_touch_hard_disabled|mobile_lightbars_webgl_hard_disabled_zaxis_untouched|viewport_|reduced_motion/.test(capability.reason || "")) {
+    if (holder && /mobile_touch_hard_disabled|mobile_cubecamera_dynamic_env_disabled_zaxis_untouched|viewport_|reduced_motion/.test(capability.reason || "")) {
       holder.innerHTML = "";
       holder.setAttribute("data-webgl-disabled", capability.reason);
     }
@@ -7470,7 +7470,7 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvTarget = null;
       scene.environment = null;
       window.PALETTEKNIFE_CHROME_DEBUG = {
-        mode: "v149g28_mobile_lightbars_webgl_disabled_zaxis_untouched",
+        mode: "v149g29_mobile_cubecamera_dynamic_env_disabled_zaxis_untouched",
         reflectionChildren: 0,
         status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
       };
