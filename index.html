@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g34 alpha-mask removal test
+Source: v149g33_v149g16_mobile_runtime_probe_background_5f5b61
+Z-axis: untouched
+Header/WebGL: untouched
+Change: removed all CSS mask-image / -webkit-mask-image declarations and historical iPhone alpha-mask blocks.
+-->
+<!--
 PaletteKnife v149g33 regression probe
 Source: v149g16_mobile_glb_high_res
 Change: approved background #5f5b61 only
@@ -3455,32 +3462,6 @@ body.is-booting #panelDesc {
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 768px) {
     .scene {
-      -webkit-mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(0,0,0,0.18) 4%,
-        rgba(0,0,0,0.82) 8%,
-        #000 12%,
-        #000 88%,
-        rgba(0,0,0,0.82) 92%,
-        rgba(0,0,0,0.18) 96%,
-        transparent 100%
-      );
-      mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(0,0,0,0.18) 4%,
-        rgba(0,0,0,0.82) 8%,
-        #000 12%,
-        #000 88%,
-        rgba(0,0,0,0.82) 92%,
-        rgba(0,0,0,0.18) 96%,
-        transparent 100%
-      );
-      -webkit-mask-repeat: no-repeat;
-      mask-repeat: no-repeat;
-      -webkit-mask-size: 100% 100%;
-      mask-size: 100% 100%;
     }
   }
 }
@@ -3504,10 +3485,6 @@ body.is-booting #panelDesc {
       bottom: calc(0px - env(safe-area-inset-bottom)) !important;
       height: auto !important;
       min-height: calc(100dvh + env(safe-area-inset-top) + env(safe-area-inset-bottom)) !important;
-      -webkit-mask-image: none !important;
-      mask-image: none !important;
-      -webkit-mask-size: auto !important;
-      mask-size: auto !important;
       padding-top: env(safe-area-inset-top) !important;
       padding-bottom: env(safe-area-inset-bottom) !important;
       overflow: visible !important;
@@ -3526,28 +3503,6 @@ body.is-booting #panelDesc {
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 768px) {
     .scene {
-      -webkit-mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(0,0,0,0.45) 3.5%,
-        #000 8%,
-        #000 92%,
-        rgba(0,0,0,0.45) 96.5%,
-        transparent 100%
-      ) !important;
-      mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba(0,0,0,0.45) 3.5%,
-        #000 8%,
-        #000 92%,
-        rgba(0,0,0,0.45) 96.5%,
-        transparent 100%
-      ) !important;
-      -webkit-mask-repeat: no-repeat !important;
-      mask-repeat: no-repeat !important;
-      -webkit-mask-size: 100% 100% !important;
-      mask-size: 100% 100% !important;
     }
   }
 }
