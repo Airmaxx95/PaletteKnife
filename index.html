@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g46a mobile WebGL GLB header visible
+PaletteKnife v149g46b mobile WebGL GLB header visible clean
 Source: v149g45_ios26_title_dom_write_fix
-Single change: mobile GLB header visible like v149g16
+Single change: remove mobile GLB hard-disable CSS/JS blocks so GLB can appear after SVG boot fade
 Z-axis: untouched
 Title DOM-write fix: retained
 Viewport alpha mask: untouched
@@ -3937,20 +3937,6 @@ body.is-booting #panelDesc {
    - Mobile GLB/WebGL header is fully disabled to rule out throttling.
    - No glare code.
    ========================================================= */
-@media (max-width: 900px), (prefers-reduced-motion: reduce) {
-  .site-header .webgl-logo-model,
-  .site-header .webgl-logo-canvas {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  .site-header .webgl-logo-fallback {
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-}
-
 /* Safari-only: avoid Safari grid/stretch interpretation by taking GLB out of layout
    and pinning it to the exact SVG/WebP fallback footprint. */
 @supports (-webkit-hyphens: none) and (not (-moz-appearance: none)) {
@@ -4000,42 +3986,33 @@ body.is-booting #panelDesc {
    - Touch/coarse/mobile devices never initialise the GLB renderer.
    - No glare code.
    ========================================================= */
-@media (pointer: coarse), (hover: none), (max-width: 900px), (prefers-reduced-motion: reduce) {
-  .site-header .webgl-logo-model,
-  .site-header .webgl-logo-canvas {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  .site-header .webgl-logo-fallback {
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-}
-
 
 /* =========================================================
-   v149g46a — MOBILE WEBGL GLB HEADER VISIBLE
+   v149g46b — MOBILE WEBGL GLB HEADER VISIBLE CLEAN
    Built from approved v149g45.
-   Single change: re-enable mobile GLB header visibility like v149g16.
+   Single change: remove old mobile GLB hard-disable blocks.
+   SVG boot/fade behaviour retained.
    Z-axis untouched. Title DOM-write fix retained. Alpha mask untouched.
    ========================================================= */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 900px), (pointer: coarse), (hover: none) {
-    .site-header .webgl-logo-model,
-    .site-header .webgl-logo-canvas {
-      display: block !important;
-      visibility: visible !important;
-    }
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  .site-header .webgl-logo-model,
+  .site-header .webgl-logo-canvas {
+    display: block !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+  }
 
-    .site-header.is-webgl-logo-ready .webgl-logo-model {
-      opacity: 1 !important;
-    }
+  .site-header.is-webgl-logo-ready .webgl-logo-model {
+    opacity: 1 !important;
+  }
 
-    .site-header.is-webgl-logo-ready .webgl-logo-fallback {
-      opacity: 0 !important;
-    }
+  .site-header.is-webgl-logo-ready .webgl-logo-fallback {
+    opacity: 0 !important;
+  }
+
+  .site-header.is-webgl-logo-booting .webgl-logo-fallback,
+  .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
+    opacity: 1 !important;
   }
 }
 
@@ -7402,7 +7379,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    /* v149g46a: mobile WebGL/GLB header visible by request; no mobile/touch hard-disable here. */
+    /* v149g46b: mobile WebGL/GLB header visible by request; no mobile/touch hard-disable here. */
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
       const c = document.createElement("canvas");
