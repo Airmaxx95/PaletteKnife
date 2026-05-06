@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g38 iOS 26 mobile backdrop-filter isolation test
+PaletteKnife v149g39 iOS 26 fixed overlay stack off test
 Source: v149g25_restore_approved_safari_glb_background_5f5b61
-Desktop header: untouched
+Desktop: untouched
 Z-axis: untouched
 Card blur: untouched
 Viewport alpha mask: retained/restored
-Change: mobile/iOS overlay backdrop-filter disabled only.
+Change: mobile/iOS fixed UI overlay stack hidden only.
 -->
 <html lang="en">
 <head>
@@ -4008,24 +4008,37 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g38 — iOS 26 MOBILE BACKDROP-FILTER ISOLATION TEST
+   v149g39 — iOS 26 MOBILE FIXED OVERLAY STACK OFF TEST
    Built from approved v149g25.
    Desktop untouched.
    Z-axis untouched.
    Card blur untouched.
    iPhone viewport alpha mask retained/restored.
-   Purpose: rule out fixed/overlay backdrop-filter compositing over moving 3D slides.
+   Purpose: rule out fixed overlay compositing over moving 3D slides.
    ========================================================= */
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 900px), (pointer: coarse), (hover: none) {
+    .site-header,
+    .slide-title-display,
+    .left-meta,
     .panel,
-    .nav-panel-inner,
-    .cart-drawer-body,
+    .panel-actions-mobile-detached,
+    .nav-panel,
+    .cart-toggle,
+    .cart-drawer,
+    .site-footer,
     .footer-terms-panel,
-    .footer-about-panel,
-    .header-inner {
+    .footer-about-panel {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      animation: none !important;
+      transition: none !important;
       -webkit-backdrop-filter: none !important;
       backdrop-filter: none !important;
+      filter: none !important;
+      -webkit-filter: none !important;
     }
   }
 }
