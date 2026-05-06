@@ -3997,6 +3997,37 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g32 MOBILE HEADER LAYER OFF TEST
+   Built from approved v149g25.
+   Desktop untouched. Z-axis untouched.
+   Purpose: rule out fixed header/SVG/canvas compositing layer on iPhone.
+   ========================================================= */
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  .site-header,
+  .header-inner,
+  .pk-webgl-logo-wrap,
+  .pk-webgl-logo-holder,
+  .pk-webgl-logo-canvas,
+  .pk-webgl-logo-fallback,
+  .pk-logo-stage,
+  .pk-logo-svg,
+  .pk-logo-glb {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -7296,12 +7327,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const canvas = document.getElementById("webglLogoCanvas");
   window.PALETTEKNIFE_WEBGL_LOGO_STATUS = "three_not_started";
   window.PALETTEKNIFE_MOBILE_WEBGL_DIAGNOSTIC = {
-    build: "v149g31",
+    build: "v149g32",
     source: "v149g25_restore_approved_safari_glb_background_5f5b61",
     zAxisTouched: false,
-    mobileHeaderWebGLBootDisabled: true,
-    mobileThreeImportsDisabled: true,
-    mobileGLBDisabled: true
+    mobileHeaderLayerHidden: true,
+    purpose: "rule_out_header_compositing_layer"
   };
   
 
@@ -7330,7 +7360,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_header_webgl_boot_imports_hard_disabled_zaxis_untouched" };
+    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_touch_hard_disabled" };
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
       const c = document.createElement("canvas");
@@ -7356,7 +7386,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const capability = canUseWebGL();
   if (!capability.ok) {
-    if (holder && /mobile_touch_hard_disabled|mobile_header_webgl_boot_imports_hard_disabled_zaxis_untouched|viewport_|reduced_motion/.test(capability.reason || "")) {
+    if (holder && /mobile_touch_hard_disabled|viewport_|reduced_motion/.test(capability.reason || "")) {
       holder.innerHTML = "";
       holder.setAttribute("data-webgl-disabled", capability.reason);
     }
@@ -7471,7 +7501,7 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvTarget = null;
       scene.environment = null;
       window.PALETTEKNIFE_CHROME_DEBUG = {
-        mode: "v149g31_mobile_header_webgl_boot_imports_disabled_zaxis_untouched",
+        mode: "v149g19_mobile_glb_disabled",
         reflectionChildren: 0,
         status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
       };
