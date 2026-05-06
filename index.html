@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g49 mobile burst-scroll WebGL environment governor
+Source: v149g48_mobile_nav_reverse_settle_fix
+Change: mobile high-energy scroll refreshes live CubeCamera/lightbar environment every other frame only during heavy motion
+Z-axis: untouched
+Blur: untouched
+Title DOM-write fix: retained
+Mobile GLB/lightbars: retained
+Viewport alpha mask: retained
+-->
+<!--
 PaletteKnife v149g48 mobile nav reverse settle fix
 Source: v149g47_mobile_nav_long_jump_defer_updates
 Change: mobile nav jump side-effects release only once target anchor is settled, fixing reverse-direction pre-target lag
@@ -7507,7 +7517,38 @@ document.addEventListener('DOMContentLoaded', function () {
     phase: 0,
     velocity: 0,
     lastNow: 0,
-    clockPhase: 0
+    clockPhase: 0,
+    envFrame: 0
+  };
+
+  function shouldUpdateLiveEnvironmentThisFrame(energy) {
+    /*
+      v149g49 mobile burst-scroll optimisation:
+      Keep z-axis fully intact. Keep GLB/lightbars alive.
+      On latest iOS, aggressive 1→end→1 scrolling can overload the GPU when
+      CubeCamera environment capture refreshes every animation frame at the
+      same time as many blurred z-slides are travelling. During high-energy
+      mobile motion, refresh the live environment every other frame, then return
+      to full-rate updates when motion calms down.
+    */
+    const isMobileWebGLRuntime = !!(
+      window.matchMedia &&
+      (
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(hover: none)").matches ||
+        window.innerWidth <= 900
+      )
+    );
+
+    if (!isMobileWebGLRuntime) return true;
+
+    liveEnvironmentMotion.envFrame = (liveEnvironmentMotion.envFrame + 1) % 60;
+
+    if (energy > 0.72) {
+      return (liveEnvironmentMotion.envFrame % 2) === 0;
+    }
+
+    return true;
   };
   let loaded = false;
   let firstFrameRendered = false;
@@ -7874,8 +7915,10 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvRig.rotation.y = p;
       liveEnvRig.rotation.z = 0;
 
-      liveEnvCubeCamera.update(renderer, liveEnvScene);
-      scene.environment = liveEnvTarget.texture;
+      if (shouldUpdateLiveEnvironmentThisFrame(energy)) {
+        liveEnvCubeCamera.update(renderer, liveEnvScene);
+        scene.environment = liveEnvTarget.texture;
+      }
     }
 
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
