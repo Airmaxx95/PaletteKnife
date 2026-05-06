@@ -3997,79 +3997,6 @@ body.is-booting #panelDesc {
   }
 }
 
-
-/* =========================================================
-   v149g22 — MOBILE MASK / SAFE-AREA COMPOSITING OFF
-   Built on v149g21.
-   Mobile-only isolation test:
-   - removes iPhone scene alpha masks
-   - removes extended safe-area scene compositing
-   - keeps desktop Chrome/Safari header state untouched
-   - keeps mobile GLB disabled from v149g21
-   ========================================================= */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 768px) {
-    html,
-    body {
-      min-height: 100% !important;
-    }
-
-    .scene {
-      top: 0 !important;
-      bottom: 0 !important;
-      height: 100% !important;
-      min-height: 0 !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      overflow: hidden !important;
-
-      -webkit-mask-image: none !important;
-      mask-image: none !important;
-      -webkit-mask: none !important;
-      mask: none !important;
-      -webkit-mask-size: auto !important;
-      mask-size: auto !important;
-      -webkit-mask-repeat: no-repeat !important;
-      mask-repeat: no-repeat !important;
-    }
-  }
-}
-
-
-/* =========================================================
-   v149g24 — SAFARI HEADER RECOVERY / SVG LOCK
-   Built on v149g23.
-   Scope only:
-   - Chrome desktop remains untouched/completed.
-   - Safari desktop no longer paints the WebGL canvas/lightbar view.
-   - Safari uses the already-correct SVG fallback as final header render.
-   - Mobile GLB remains disabled.
-   ========================================================= */
-@supports (-webkit-hyphens: none) and (not (-moz-appearance: none)) {
-  @media (min-width: 901px) {
-    .site-header .webgl-logo-model,
-    .site-header .webgl-logo-canvas {
-      display: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    .site-header .webgl-logo-fallback {
-      opacity: 1 !important;
-      visibility: visible !important;
-      display: block !important;
-    }
-
-    .site-header.is-webgl-logo-ready .webgl-logo-fallback,
-    .site-header.is-webgl-logo-booting .webgl-logo-fallback,
-    .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
-  }
-}
-
 </style>
 
 <script type="application/ld+json">
@@ -4217,27 +4144,6 @@ body.is-booting #panelDesc {
   function isMobileTouchViewport() {
     return window.innerWidth <= 900;
   }
-
-  /* =========================================================
-     v149g21 — MOBILE Z-AXIS / WEBGL BRIDGE HARD OFF
-     Desktop Chrome + Safari are complete and must remain untouched.
-     On mobile/touch devices, do not dispatch the per-frame z-axis
-     CustomEvent used by the WebGL header reflection bridge. The GLB
-     renderer is already disabled on mobile in v149g20; this removes
-     the remaining scroll-reactive bridge cost during z-axis motion.
-     ========================================================= */
-  function isMobileOrTouchRuntime() {
-    const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    const noHover = window.matchMedia && window.matchMedia("(hover: none)").matches;
-    const narrow = window.innerWidth <= 900;
-    const touchPoints = navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
-    const ua = navigator.userAgent || "";
-    const mobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
-    return !!(coarse || noHover || narrow || touchPoints || mobileUA);
-  }
-
-  window.PALETTEKNIFE_MOBILE_RUNTIME = isMobileOrTouchRuntime();
-  window.PALETTEKNIFE_ZAXIS_WEBGL_BRIDGE_DISABLED_ON_MOBILE = window.PALETTEKNIFE_MOBILE_RUNTIME;
 
   function isInFooterScrollablePanel(target) {
     if (!target || !target.closest) return false;
@@ -6700,17 +6606,9 @@ body.is-booting #panelDesc {
     }
 
     renderAll();
-
-    /*
-      Desktop only: this event drives the approved WebGL header reflection bridge.
-      Mobile/touch: never dispatch it, even when the header GLB is visually hidden.
-      This isolates mobile z-axis scroll from all recent WebGL/header reactivity.
-    */
-    if (!window.PALETTEKNIFE_ZAXIS_WEBGL_BRIDGE_DISABLED_ON_MOBILE) {
-      try {
-        window.dispatchEvent(new CustomEvent("paletteknife:zaxis", { detail: { position: position, velocity: velocity, targetVelocity: targetVelocity } }));
-      } catch (error) {}
-    }
+    try {
+      window.dispatchEvent(new CustomEvent("paletteknife:zaxis", { detail: { position: position, velocity: velocity, targetVelocity: targetVelocity } }));
+    } catch (error) {}
 
     if (
       introActive ||
@@ -7423,9 +7321,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    const uaForSafariLock = navigator.userAgent || "";
-    const isSafariForHeaderLock = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(uaForSafariLock);
-    if (isSafariForHeaderLock && window.innerWidth >= DESKTOP_MIN_WIDTH) return { ok: false, reason: "safari_svg_locked" };
     if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_touch_hard_disabled" };
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
@@ -7456,7 +7351,6 @@ document.addEventListener('DOMContentLoaded', function () {
       holder.innerHTML = "";
       holder.setAttribute("data-webgl-disabled", capability.reason);
     }
-    window.PALETTEKNIFE_WEBGL_HEADER_DISABLED_ON_MOBILE = /mobile_touch_hard_disabled|viewport_/.test(capability.reason || "");
     fallback(capability.reason);
     return;
   }
