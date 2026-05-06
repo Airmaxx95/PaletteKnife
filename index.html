@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g50 mobile live environment resolution test
+PaletteKnife v149g51 mobile header DPR 2.0 safe optimisation
 Source: v149g48_mobile_nav_reverse_settle_fix
-Change: mobile CubeCamera/live-lightbar capture resolution reduced from 512 to 384, while keeping full-rate updates
+Change: mobile header WebGL renderer DPR reduced from 2.5 to 2.0
 Z-axis: untouched
 Blur: untouched
 Title DOM-write fix: retained
 Nav reverse fix: retained
-Mobile GLB/lightbars: retained
+Full-rate mobile GLB/lightbars/CubeCamera retained
 Viewport alpha mask: retained
-v149g49 discarded because every-other-frame update felt worse
+v149g49/v149g50 discarded
 -->
 <!--
 PaletteKnife v149g48 mobile nav reverse settle fix
@@ -7551,7 +7551,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const rect = holder.getBoundingClientRect();
     const w = Math.max(2, Math.floor(rect.width));
     const h = Math.max(2, Math.floor(rect.height));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.5 : 1.8));
+    /*
+      v149g51 mobile optimisation:
+      Keep full-rate lightbars/CubeCamera and z-axis unchanged.
+      Reduce only the mobile header WebGL renderer DPR from 2.5 to 2.0.
+      This avoids the temporal stutter caused by frame-skipping governors while
+      reducing the constant GPU cost of the mobile header canvas on latest iOS.
+    */
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 768 ? 2.0 : 1.8));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -7702,12 +7709,7 @@ document.addEventListener('DOMContentLoaded', function () {
     floorFill.rotation.x = Math.PI / 2;
     liveEnvRig.add(floorFill);
 
-    const liveEnvCubeSize = (window.matchMedia && (
-      window.matchMedia("(pointer: coarse)").matches ||
-      window.matchMedia("(hover: none)").matches ||
-      window.innerWidth <= 900
-    )) ? 384 : 512;
-    liveEnvTarget = new THREE.WebGLCubeRenderTarget(liveEnvCubeSize, {
+    liveEnvTarget = new THREE.WebGLCubeRenderTarget(512, {
       type: THREE.UnsignedByteType,
       generateMipmaps: true,
       minFilter: THREE.LinearMipmapLinearFilter
