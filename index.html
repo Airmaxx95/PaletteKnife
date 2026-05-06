@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g46 mobile alpha-mask raise + GLB header visible
+PaletteKnife v149g46a mobile WebGL GLB header visible
 Source: v149g45_ios26_title_dom_write_fix
+Single change: mobile GLB header visible like v149g16
 Z-axis: untouched
 Title DOM-write fix: retained
-Viewport alpha mask: retained and raised
-Mobile GLB header: re-enabled
+Viewport alpha mask: untouched
 -->
 <!--
 PaletteKnife v149g45 iOS 26 title DOM-write fix
@@ -3467,23 +3467,23 @@ body.is-booting #panelDesc {
       -webkit-mask-image: linear-gradient(
         to bottom,
         transparent 0%,
-        rgba(0,0,0,0.22) 2.5%,
-        rgba(0,0,0,0.86) 6%,
-        #000 9%,
-        #000 85%,
-        rgba(0,0,0,0.80) 90%,
-        rgba(0,0,0,0.16) 95%,
+        rgba(0,0,0,0.18) 4%,
+        rgba(0,0,0,0.82) 8%,
+        #000 12%,
+        #000 88%,
+        rgba(0,0,0,0.82) 92%,
+        rgba(0,0,0,0.18) 96%,
         transparent 100%
       );
       mask-image: linear-gradient(
         to bottom,
         transparent 0%,
-        rgba(0,0,0,0.22) 2.5%,
-        rgba(0,0,0,0.86) 6%,
-        #000 9%,
-        #000 85%,
-        rgba(0,0,0,0.80) 90%,
-        rgba(0,0,0,0.16) 95%,
+        rgba(0,0,0,0.18) 4%,
+        rgba(0,0,0,0.82) 8%,
+        #000 12%,
+        #000 88%,
+        rgba(0,0,0,0.82) 92%,
+        rgba(0,0,0,0.18) 96%,
         transparent 100%
       );
       -webkit-mask-repeat: no-repeat;
@@ -3538,19 +3538,19 @@ body.is-booting #panelDesc {
       -webkit-mask-image: linear-gradient(
         to bottom,
         transparent 0%,
-        rgba(0,0,0,0.52) 2.4%,
-        #000 5.8%,
-        #000 89.5%,
-        rgba(0,0,0,0.42) 94.8%,
+        rgba(0,0,0,0.45) 3.5%,
+        #000 8%,
+        #000 92%,
+        rgba(0,0,0,0.45) 96.5%,
         transparent 100%
       ) !important;
       mask-image: linear-gradient(
         to bottom,
         transparent 0%,
-        rgba(0,0,0,0.52) 2.4%,
-        #000 5.8%,
-        #000 89.5%,
-        rgba(0,0,0,0.42) 94.8%,
+        rgba(0,0,0,0.45) 3.5%,
+        #000 8%,
+        #000 92%,
+        rgba(0,0,0,0.45) 96.5%,
         transparent 100%
       ) !important;
       -webkit-mask-repeat: no-repeat !important;
@@ -4016,15 +4016,13 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g46 — MOBILE GLB HEADER VISIBLE + RAISED ALPHA MASK
+   v149g46a — MOBILE WEBGL GLB HEADER VISIBLE
    Built from approved v149g45.
-   Desktop untouched.
-   Z-axis/title DOM-write fix retained.
-   Mobile/iOS: allow WebGL/GLB header to render again.
+   Single change: re-enable mobile GLB header visibility like v149g16.
+   Z-axis untouched. Title DOM-write fix retained. Alpha mask untouched.
    ========================================================= */
 @supports (-webkit-touch-callout: none) {
   @media (max-width: 900px), (pointer: coarse), (hover: none) {
-    .site-header .webgl-logo-wrap,
     .site-header .webgl-logo-model,
     .site-header .webgl-logo-canvas {
       display: block !important;
@@ -4037,11 +4035,6 @@ body.is-booting #panelDesc {
 
     .site-header.is-webgl-logo-ready .webgl-logo-fallback {
       opacity: 0 !important;
-    }
-
-    .site-header.is-webgl-logo-booting .webgl-logo-fallback,
-    .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
-      opacity: 1 !important;
     }
   }
 }
@@ -7409,7 +7402,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    /* v149g46: mobile GLB header re-enabled by request; do not hard-disable touch/mobile here. */
+    /* v149g46a: mobile WebGL/GLB header visible by request; no mobile/touch hard-disable here. */
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
       const c = document.createElement("canvas");
