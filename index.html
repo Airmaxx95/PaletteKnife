@@ -3997,36 +3997,6 @@ body.is-booting #panelDesc {
   }
 }
 
-/* =========================================================
-   v149g27 — MOBILE Z-AXIS LOAD/DECODE PERFORMANCE PATCH
-   Desktop untouched. Mobile only.
-   - Prevent distant slides from compositing while scrolling.
-   - Avoid animated CSS blur on iPhone/mobile.
-   - Keep current/near slides warm-loaded.
-   ========================================================= */
-@media (max-width: 768px), (pointer: coarse), (hover: none) {
-  .card.pk-mobile-zhidden {
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-
-  .card.pk-mobile-no-filter {
-    filter: none !important;
-  }
-
-  .card {
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform-style: flat;
-  }
-
-  .media-item {
-    image-rendering: auto;
-  }
-}
-
-
 </style>
 
 <script type="application/ld+json">
@@ -5595,8 +5565,7 @@ body.is-booting #panelDesc {
     img.className = "media-item";
     img.src = media.src;
     img.alt = "";
-    img.decoding = "async";
-    img.loading = (window.matchMedia && window.matchMedia("(max-width: 768px), (pointer: coarse), (hover: none)").matches) ? "lazy" : "eager";
+    img.loading = "eager";
     img.dataset.kind = media.kind;
     return img;
   }
@@ -6458,54 +6427,6 @@ body.is-booting #panelDesc {
     return nearestIdx;
   }
 
-
-  function isMobileZAxisPerfMode() {
-    return !!(window.matchMedia && window.matchMedia("(max-width: 768px), (pointer: coarse), (hover: none)").matches);
-  }
-
-  function warmMobileSlideMedia(index) {
-    if (!isMobileZAxisPerfMode()) return;
-    for (let i = index - 1; i <= index + 1; i += 1) {
-      const card = cards[i];
-      if (!card) continue;
-      card.querySelectorAll("img").forEach((img) => {
-        try {
-          img.loading = "eager";
-          img.decoding = "async";
-          if (typeof img.decode === "function" && img.complete) {
-            img.decode().catch(() => {});
-          }
-        } catch (error) {}
-      });
-      card.querySelectorAll("video").forEach((video) => {
-        try {
-          video.preload = "metadata";
-        } catch (error) {}
-      });
-    }
-  }
-
-  function setMobileCardCullState(card, hidden) {
-    if (!card) return;
-    if (hidden) {
-      if (card._pkMobileHidden === true) return;
-      card._pkMobileHidden = true;
-      card.classList.add("pk-mobile-zhidden");
-      card.style.visibility = "hidden";
-      card.style.opacity = "0";
-      card.style.pointerEvents = "none";
-      card.style.filter = "none";
-      stopMediaNode(card);
-      return;
-    }
-
-    if (card._pkMobileHidden === false) return;
-    card._pkMobileHidden = false;
-    card.classList.remove("pk-mobile-zhidden");
-    card.style.visibility = "visible";
-    card.style.pointerEvents = "";
-  }
-
   function renderCard(card, effectiveZ) {
     const scale = effectiveZ <= 0
       ? mapRange(effectiveZ, CONFIG.farFadeEnd, 0, CONFIG.farScale, CONFIG.centerScale)
@@ -6537,17 +6458,9 @@ body.is-booting #panelDesc {
       blur = Math.max(blur, CONFIG.maxBlurNear * smoothstep(t));
     }
 
-    const mobilePerf = isMobileZAxisPerfMode();
-    if (mobilePerf) {
-      blur = 0;
-      card.classList.add("pk-mobile-no-filter");
-    } else {
-      card.classList.remove("pk-mobile-no-filter");
-    }
-
     card.style.transform = `translate(-50%, -50%) translateZ(${effectiveZ}px) scale(${scale.toFixed(4)})`;
     card.style.opacity = opacity.toFixed(4);
-    card.style.filter = mobilePerf ? "none" : `blur(${blur.toFixed(2)}px)`;
+    card.style.filter = `blur(${blur.toFixed(2)}px)`;
   }
 
   function getCurrentSlideTitle() {
@@ -6573,38 +6486,24 @@ body.is-booting #panelDesc {
     const slug = String((product && product.slug) || "").trim();
     const showMeta = shouldShowCenteredTitle();
 
-    if (slideTitleText && slideTitleText.textContent !== title) slideTitleText.textContent = title;
+    if (slideTitleText) slideTitleText.textContent = title;
     if (slideTitleSlug) {
-      if (slideTitleSlug.textContent !== slug) slideTitleSlug.textContent = slug;
-      const nextSlugDisplay = slug ? "block" : "none";
-      if (slideTitleSlug.style.display !== nextSlugDisplay) slideTitleSlug.style.display = nextSlugDisplay;
+      slideTitleSlug.textContent = slug;
+      slideTitleSlug.style.display = slug ? "block" : "none";
     }
 
-    const nextTitleOpacity = showMeta ? "1" : "0";
-    if (slideTitleDisplay.style.opacity !== nextTitleOpacity) slideTitleDisplay.style.opacity = nextTitleOpacity;
-    if (leftMeta && leftMeta.style.opacity !== nextTitleOpacity) leftMeta.style.opacity = nextTitleOpacity;
+    slideTitleDisplay.style.opacity = showMeta ? "1" : "0";
+    if (leftMeta) leftMeta.style.opacity = showMeta ? "1" : "0";
   }
 
   function renderAll() {
     const introOffset = getIntroOffset();
-
-    const mobilePerf = isMobileZAxisPerfMode();
 
     cards.forEach((card, index) => {
       let effectiveZ = position + (index * CONFIG.slideSpacing);
       if (index === 0 && introActive) {
         effectiveZ += introOffset;
       }
-
-      if (mobilePerf) {
-        const distanceFromViewport = Math.abs(effectiveZ);
-        const hidden = distanceFromViewport > (CONFIG.slideSpacing * 1.65);
-        setMobileCardCullState(card, hidden);
-        if (hidden) return;
-      } else {
-        setMobileCardCullState(card, false);
-      }
-
       renderCard(card, effectiveZ);
     });
 
@@ -6612,7 +6511,6 @@ body.is-booting #panelDesc {
     if (newCentered !== currentCenteredIndex) {
       closeAllLightboxes();
       currentCenteredIndex = newCentered;
-      warmMobileSlideMedia(currentCenteredIndex);
       setPanelValidationMessage("");
       renderPanel(currentCenteredIndex);
 
@@ -7012,7 +6910,6 @@ body.is-booting #panelDesc {
       loadCart();
       renderCart();
       currentCenteredIndex = 0;
-      warmMobileSlideMedia(0);
       setPanelValidationMessage("");
       renderPanel(0, { immediate: true });
       trackViewItem(PRODUCTS[0], 0, "initial_load");
@@ -7412,6 +7309,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  window.PALETTEKNIFE_MOBILE_WEBGL_DIAGNOSTIC = {
+    build: "v149g28",
+    source: "v149g25_restore_approved_safari_glb_background_5f5b61",
+    zAxisTouched: false,
+    mobileLightbarsDisabled: true,
+    mobileHeaderWebGLDisabled: true
+  };
+
   function isTouchOrMobileHeader() {
     const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
     const noHover = window.matchMedia && window.matchMedia("(hover: none)").matches;
@@ -7424,7 +7329,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
-    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_touch_hard_disabled" };
+    if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_lightbars_webgl_hard_disabled_zaxis_untouched" };
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
       const c = document.createElement("canvas");
@@ -7450,7 +7355,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const capability = canUseWebGL();
   if (!capability.ok) {
-    if (holder && /mobile_touch_hard_disabled|viewport_|reduced_motion/.test(capability.reason || "")) {
+    if (holder && /mobile_touch_hard_disabled|mobile_lightbars_webgl_hard_disabled_zaxis_untouched|viewport_|reduced_motion/.test(capability.reason || "")) {
       holder.innerHTML = "";
       holder.setAttribute("data-webgl-disabled", capability.reason);
     }
@@ -7565,7 +7470,7 @@ document.addEventListener('DOMContentLoaded', function () {
       liveEnvTarget = null;
       scene.environment = null;
       window.PALETTEKNIFE_CHROME_DEBUG = {
-        mode: "v149g19_mobile_glb_disabled",
+        mode: "v149g28_mobile_lightbars_webgl_disabled_zaxis_untouched",
         reflectionChildren: 0,
         status: window.PALETTEKNIFE_WEBGL_LOGO_STATUS
       };
