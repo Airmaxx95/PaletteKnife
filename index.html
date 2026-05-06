@@ -4035,6 +4035,41 @@ body.is-booting #panelDesc {
   }
 }
 
+
+/* =========================================================
+   v149g24 — SAFARI HEADER RECOVERY / SVG LOCK
+   Built on v149g23.
+   Scope only:
+   - Chrome desktop remains untouched/completed.
+   - Safari desktop no longer paints the WebGL canvas/lightbar view.
+   - Safari uses the already-correct SVG fallback as final header render.
+   - Mobile GLB remains disabled.
+   ========================================================= */
+@supports (-webkit-hyphens: none) and (not (-moz-appearance: none)) {
+  @media (min-width: 901px) {
+    .site-header .webgl-logo-model,
+    .site-header .webgl-logo-canvas {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    .site-header .webgl-logo-fallback {
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: block !important;
+    }
+
+    .site-header.is-webgl-logo-ready .webgl-logo-fallback,
+    .site-header.is-webgl-logo-booting .webgl-logo-fallback,
+    .site-header.is-webgl-logo-fallback .webgl-logo-fallback {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
+}
+
 </style>
 
 <script type="application/ld+json">
@@ -7388,6 +7423,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function canUseWebGL() {
     if (!header || !holder || !canvas) return { ok: false, reason: "missing_dom" };
+    const uaForSafariLock = navigator.userAgent || "";
+    const isSafariForHeaderLock = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(uaForSafariLock);
+    if (isSafariForHeaderLock && window.innerWidth >= DESKTOP_MIN_WIDTH) return { ok: false, reason: "safari_svg_locked" };
     if (isTouchOrMobileHeader()) return { ok: false, reason: "mobile_touch_hard_disabled" };
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { ok: false, reason: "reduced_motion" };
     try {
