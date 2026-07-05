@@ -1,5 +1,36 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g87 mobile panel touch scroll isolation
+Source: v149g86_micro_hygiene
+Change:
+- touch-scrolling inside the open cart body or open Collection grid no longer feeds the z-axis engine on mobile
+- new isInTouchScrollIsolatedPanel() helper extends the proven v139 footer-panel guard to cart/nav, gated on the panel being open, mirroring the desktop wheel exemption
+- all three touch handlers (touchstart/touchmove/touchend) use the combined guard
+Reason:
+- desktop wheel input exempted cart/nav since early baselines; the mobile touch path only ever exempted footer Terms/About panels (v139), so panel-internal touch scrolling also moved the scene. Pre-existing in v149g82 and earlier; verified byte-identical touch handlers in the approved baseline.
+Preserved:
+- z-axis physics untouched (guard only bails before velocity input, exactly like v139)
+- touch handlers remain passive; native panel scrolling unchanged
+- footer panel isolation behaviour unchanged
+- cart outside-tap close and nav item-tap-to-close unchanged
+- blur / WebGL / dropdown system untouched
+-->
+<!--
+PaletteKnife v149g86 micro hygiene
+Source: v149g85_keyboard_guard
+Change:
+- cartDrawerBody hoisted to top-level element consts; wheel handler and closePanelsFromOutsideTarget no longer re-query the DOM per event (navGrid re-query also removed)
+- panelDesc writes in renderPanel now null-guarded like every other panel element
+- removed dead validation comparison "Select a size & colour." (validateSelectionState can never produce it)
+- getEventClientPoint returns null on failure instead of a fake {0,0}; both call sites null-check, so clicks at true coordinate 0 are no longer rejected
+Preserved:
+- z-axis untouched
+- blur untouched
+- WebGL untouched
+- keyboard guard retained
+- all g84 fixes retained
+-->
+<!--
 PaletteKnife v149g85 keyboard interactive-target guard
 Source: v149g84_audit_fixes_batch1
 Change:
@@ -4494,6 +4525,40 @@ body.is-booting #panelDesc {
     );
   }
 
+  /*
+    v149g87 mobile panel touch scroll isolation:
+    Desktop wheel input already exempts gestures inside the open cart body
+    and open Collection grid from feeding the z-axis engine. The mobile
+    touch path only ever exempted footer Terms/About panels (v139), so
+    touch-scrolling inside the cart or Collection on iPhone also moved the
+    z-axis scene. Extend the proven v139 guard pattern to those panels,
+    gated on the panel actually being open, mirroring desktop semantics.
+    Touch handlers remain passive; native internal panel scrolling is
+    unchanged. Z-axis physics untouched.
+  */
+  function isInTouchScrollIsolatedPanel(target) {
+    if (isInFooterScrollablePanel(target)) return true;
+    if (!target || !target.closest) return false;
+
+    if (
+      cartDrawer && cartDrawerBody &&
+      cartDrawer.classList.contains("is-open") &&
+      cartDrawerBody.contains(target)
+    ) {
+      return true;
+    }
+
+    if (
+      navPanel && navGrid &&
+      navPanel.classList.contains("is-open") &&
+      navGrid.contains(target)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
   function isFooterPanelOpen() {
     const termsPanel = document.getElementById("footerTermsPanel");
     const aboutPanel = document.getElementById("footerAboutPanel");
@@ -4619,6 +4684,7 @@ body.is-booting #panelDesc {
   const leftMetaASN = document.getElementById("leftMetaASN");
   const cartToggle = document.getElementById("cartToggle");
   const cartDrawer = document.getElementById("cartDrawer");
+  const cartDrawerBody = document.getElementById("cartDrawerBody");
   const cartClose = document.getElementById("cartClose");
   const cartItems = document.getElementById("cartItems");
   const cartTotal = document.getElementById("cartTotal");
@@ -5683,7 +5749,7 @@ body.is-booting #panelDesc {
       return { x: touch.clientX, y: touch.clientY };
     }
 
-    return { x: 0, y: 0 };
+    return null;
   }
 
   function resolveMediaNodeForCard(card) {
@@ -5802,7 +5868,7 @@ body.is-booting #panelDesc {
     if (isIgnoredUiTarget(target)) return;
 
     const point = getEventClientPoint(event);
-    if (!point.x || !point.y) return;
+    if (!point) return;
 
     const dominantIndex = getVisuallyDominantCardIndexAtPoint(point.x, point.y);
     if (dominantIndex === null) return;
@@ -5828,7 +5894,7 @@ body.is-booting #panelDesc {
 
   function updateVisibleMediaHoverCursor(index, event) {
     const point = getEventClientPoint(event);
-    const dominantIndex = (point.x && point.y) ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
+    const dominantIndex = point ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
 
     cards.forEach((card) => {
       if (!card || !card._els) return;
@@ -6547,8 +6613,10 @@ body.is-booting #panelDesc {
           panelPrice.style.visibility = showPrice ? "visible" : "hidden";
         }
 
-        panelDesc.textContent = "";
-        panelDesc.style.display = "none";
+        if (panelDesc) {
+          panelDesc.textContent = "";
+          panelDesc.style.display = "none";
+        }
 
         if (panelEdition) {
           panelEdition.textContent = "";
@@ -6618,7 +6686,7 @@ body.is-booting #panelDesc {
 
         if (primaryActionBtn) {
           const stateAllowsPurchase = state === "for_sale" || state === "for sale" || state === "forsale" || state === "preorder" || state === "pre order" || state === "pre_order";
-          const missingSelectionState = validation.message === "Select a colour." || validation.message === "Select a size." || validation.message === "Select a size & colour.";
+          const missingSelectionState = validation.message === "Select a colour." || validation.message === "Select a size.";
           const selectedVariantOutOfStock = validation.message === "Out of stock.";
           if (selectedVariantOutOfStock && stateAllowsPurchase) {
             primaryActionBtn.textContent = "Out of stock";
@@ -7250,11 +7318,8 @@ body.is-booting #panelDesc {
   // INPUTS
   // =========================================================
   window.addEventListener("wheel", (e) => {
-    const cartDrawerBody = document.getElementById("cartDrawerBody");
-    const navGridEl = document.getElementById("navGrid");
-
     const inCart = cartDrawerBody && cartDrawer && cartDrawer.classList.contains("is-open") && cartDrawerBody.contains(e.target);
-    const inNav = navGridEl && navPanel && navPanel.classList.contains("is-open") && navGridEl.contains(e.target);
+    const inNav = navGrid && navPanel && navPanel.classList.contains("is-open") && navGrid.contains(e.target);
 
     if (inCart || inNav) {
       return;
@@ -7336,7 +7401,7 @@ body.is-booting #panelDesc {
   let lastY = null;
   let lastX = null;
   window.addEventListener("touchstart", (e) => {
-    if (isInFooterScrollablePanel(e.target)) {
+    if (isInTouchScrollIsolatedPanel(e.target)) {
       lastY = null;
       lastX = null;
       touchGestureMoved = false;
@@ -7359,7 +7424,7 @@ body.is-booting #panelDesc {
   }, { passive: true });
 
   window.addEventListener("touchmove", (e) => {
-    if (isInFooterScrollablePanel(e.target)) return;
+    if (isInTouchScrollIsolatedPanel(e.target)) return;
     if (!e.touches.length || lastY === null) return;
 
     if (isFooterPanelOpen() && !isInFooterPanelOrToggle(e.target)) {
@@ -7396,7 +7461,7 @@ body.is-booting #panelDesc {
   }, { passive: true });
 
   window.addEventListener("touchend", (e) => {
-    if (isInFooterScrollablePanel(e.target)) {
+    if (isInTouchScrollIsolatedPanel(e.target)) {
       lastY = null;
       lastX = null;
       touchGestureMoved = false;
@@ -7508,7 +7573,6 @@ body.is-booting #panelDesc {
   function closePanelsFromOutsideTarget(target) {
     if (shouldIgnoreOutsidePanelClose(target)) return;
 
-    const cartDrawerBody = document.getElementById("cartDrawerBody");
     const insideCart = !!(
       cartDrawerBody?.contains(target) ||
       cartClose?.contains(target) ||
