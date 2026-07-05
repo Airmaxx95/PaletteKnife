@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g87 mobile panel touch scroll isolation
+Source: v149g86_micro_hygiene
+Change:
+- touch-scrolling inside the open cart body or open Collection grid no longer feeds the z-axis engine on mobile
+- new isInTouchScrollIsolatedPanel() helper extends the proven v139 footer-panel guard to cart/nav, gated on the panel being open, mirroring the desktop wheel exemption
+- all three touch handlers (touchstart/touchmove/touchend) use the combined guard
+Reason:
+- desktop wheel input exempted cart/nav since early baselines; the mobile touch path only ever exempted footer Terms/About panels (v139), so panel-internal touch scrolling also moved the scene. Pre-existing in v149g82 and earlier; verified byte-identical touch handlers in the approved baseline.
+Preserved:
+- z-axis physics untouched (guard only bails before velocity input, exactly like v139)
+- touch handlers remain passive; native panel scrolling unchanged
+- footer panel isolation behaviour unchanged
+- cart outside-tap close and nav item-tap-to-close unchanged
+- blur / WebGL / dropdown system untouched
+-->
+<!--
 PaletteKnife v149g86 micro hygiene
 Source: v149g85_keyboard_guard
 Change:
@@ -4509,6 +4525,40 @@ body.is-booting #panelDesc {
     );
   }
 
+  /*
+    v149g87 mobile panel touch scroll isolation:
+    Desktop wheel input already exempts gestures inside the open cart body
+    and open Collection grid from feeding the z-axis engine. The mobile
+    touch path only ever exempted footer Terms/About panels (v139), so
+    touch-scrolling inside the cart or Collection on iPhone also moved the
+    z-axis scene. Extend the proven v139 guard pattern to those panels,
+    gated on the panel actually being open, mirroring desktop semantics.
+    Touch handlers remain passive; native internal panel scrolling is
+    unchanged. Z-axis physics untouched.
+  */
+  function isInTouchScrollIsolatedPanel(target) {
+    if (isInFooterScrollablePanel(target)) return true;
+    if (!target || !target.closest) return false;
+
+    if (
+      cartDrawer && cartDrawerBody &&
+      cartDrawer.classList.contains("is-open") &&
+      cartDrawerBody.contains(target)
+    ) {
+      return true;
+    }
+
+    if (
+      navPanel && navGrid &&
+      navPanel.classList.contains("is-open") &&
+      navGrid.contains(target)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
   function isFooterPanelOpen() {
     const termsPanel = document.getElementById("footerTermsPanel");
     const aboutPanel = document.getElementById("footerAboutPanel");
@@ -7351,7 +7401,7 @@ body.is-booting #panelDesc {
   let lastY = null;
   let lastX = null;
   window.addEventListener("touchstart", (e) => {
-    if (isInFooterScrollablePanel(e.target)) {
+    if (isInTouchScrollIsolatedPanel(e.target)) {
       lastY = null;
       lastX = null;
       touchGestureMoved = false;
@@ -7374,7 +7424,7 @@ body.is-booting #panelDesc {
   }, { passive: true });
 
   window.addEventListener("touchmove", (e) => {
-    if (isInFooterScrollablePanel(e.target)) return;
+    if (isInTouchScrollIsolatedPanel(e.target)) return;
     if (!e.touches.length || lastY === null) return;
 
     if (isFooterPanelOpen() && !isInFooterPanelOrToggle(e.target)) {
@@ -7411,7 +7461,7 @@ body.is-booting #panelDesc {
   }, { passive: true });
 
   window.addEventListener("touchend", (e) => {
-    if (isInFooterScrollablePanel(e.target)) {
+    if (isInTouchScrollIsolatedPanel(e.target)) {
       lastY = null;
       lastX = null;
       touchGestureMoved = false;
