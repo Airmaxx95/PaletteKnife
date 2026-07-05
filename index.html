@@ -1,24 +1,5 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g92 dead lightbox DOM removal
-Source: v149g91_anchor_spring_explicit
-Change:
-- buildSlides() no longer creates the hidden lightbox topbar (title counter + Close button) or controls bar (Prev/Next/hint) for every card
-- swapLightboxMedia() no longer writes title counter / button-disabled state to invisible nodes on every media swap
-- transition wraps append to the lightbox stage (identical end position: they previously inserted before the hidden topbar, last among visible children)
-- card._els no longer carries topbarMeta/prevBtn/nextBtn/centerHint
-- removed CSS: the two display:none hide rules and the orphaned .lightbox-meta block; removed dead selector entries from the outside-close guard
-Reason:
-- v124 audit M2: legacy DOM from the pre-v111 visible-lightbox architecture, permanently hidden and unreachable (close = Escape/scroll-away, cycling = click/arrow keys via geometry resolver), yet built per card and written to per swap — hidden DOM work on the exact path the v149g80 fix identified as costly on mobile
-Preserved:
-- geometry-based click resolution untouched
-- fade-to-background sequential transition timing untouched (320ms + 320ms)
-- shiftLightbox/cycleLightbox/closeLightbox logic untouched (only the unreachable button bindings removed)
-- Escape close, scroll-away reset, colour-media sync untouched
-- .btn CSS family left for the Phase 8 sprint (grouped selectors)
-- z-axis / blur / WebGL / all prior fixes retained
--->
-<!--
 PaletteKnife v149g91 anchor spring composition made explicit
 Source: v149g90_max_qty_cta_state
 Change:
@@ -452,6 +433,18 @@ Change: title DOM/text/opacity writes are cached to avoid per-frame fixed overla
 
   .card.is-lightbox-open .media-frame {
     opacity: 0;
+  }
+
+  .lightbox-controls { display:none !important; }
+
+  .lightbox-topbar { display:none !important; }
+
+  .lightbox-meta {
+    
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
   }
 
   .btn {
@@ -5883,7 +5876,7 @@ body.is-booting #panelDesc {
   function isIgnoredUiTarget(target) {
     if (!target || !target.closest) return false;
     return !!target.closest(
-      ".panel, .nav-panel, .cart-drawer, .site-footer, .btn, button, a, input, select, textarea"
+      ".panel, .nav-panel, .cart-drawer, .site-footer, .lightbox-controls, .lightbox-topbar, .btn, button, a, input, select, textarea"
     );
   }
 
@@ -6143,20 +6136,55 @@ body.is-booting #panelDesc {
       const lightbox = document.createElement("div");
       lightbox.className = "lightbox-stage";
 
-      /*
-        v149g92: the lightbox topbar (title counter + Close button) and
-        controls bar (Prev / Next / hint text) were legacy DOM from the
-        pre-v111 visible-lightbox architecture, permanently hidden by
-        display:none !important since the invisible-lightbox redesign and
-        unreachable by any input path (close = Escape / scroll away,
-        cycling = click / arrow keys via the geometry resolver). They were
-        still built for every card and written to on every media swap.
-        Removed entirely; transition wraps now append to the stage, which
-        yields the identical DOM end-state (they previously inserted
-        before the hidden topbar, i.e. last among visible children).
-      */
+      const topbar = document.createElement("div");
+      topbar.className = "lightbox-topbar";
+
+      const meta = document.createElement("div");
+      meta.className = "lightbox-meta";
+      meta.textContent = `${product.title} • 1 / ${product.media.length}`;
+
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "btn";
+      closeBtn.textContent = "Close";
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeLightbox(index, true);
+      });
+
+      topbar.append(meta, closeBtn);
+
       const stageMedia = createMediaElement(product.media[0], { autoplay: true, muted: true, loop: true, altText: product.title || "" });
       lightbox.appendChild(stageMedia);
+      lightbox.appendChild(topbar);
+
+      const controls = document.createElement("div");
+      controls.className = "lightbox-controls";
+
+      const prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "btn";
+      prevBtn.textContent = "Prev";
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        shiftLightbox(index, -1);
+      });
+
+      const openText = document.createElement("div");
+      openText.className = "lightbox-meta";
+      openText.textContent = "Click media to open gallery";
+
+      const nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "btn";
+      nextBtn.textContent = "Next";
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        shiftLightbox(index, 1);
+      });
+
+      controls.append(prevBtn, openText, nextBtn);
+      lightbox.appendChild(controls);
 
       const fade = document.createElement('div');
       fade.className = 'fade-overlay';
@@ -6175,7 +6203,11 @@ body.is-booting #panelDesc {
       card._els = {
         frame,
         lightbox,
+        topbarMeta: meta,
         stageMedia,
+        prevBtn,
+        nextBtn,
+        centerHint: openText,
         isMediaTransitioning: false
       };
 
@@ -6203,9 +6235,8 @@ body.is-booting #panelDesc {
     }
 
     card._els.isMediaTransitioning = true;
-    // v149g92: wraps previously inserted before the hidden topbar; with it
-    // removed, appendChild yields the identical position after stageMedia.
-    card._els.lightbox.appendChild(outgoingWrap);
+    const insertionPoint = card._els.topbarMeta.parentNode;
+    card._els.lightbox.insertBefore(outgoingWrap, insertionPoint);
 
     // Phase 1: fade current media fully out to reveal the background colour underneath
     requestAnimationFrame(() => {
@@ -6219,7 +6250,7 @@ body.is-booting #panelDesc {
       const incomingWrap = document.createElement("div");
       incomingWrap.className = "lightbox-transition-media";
       incomingWrap.appendChild(nextNode);
-      card._els.lightbox.appendChild(incomingWrap);
+      card._els.lightbox.insertBefore(incomingWrap, insertionPoint);
 
       void incomingWrap.offsetWidth;
 
@@ -6231,6 +6262,9 @@ body.is-booting #panelDesc {
       window.setTimeout(() => {
         incomingWrap.replaceWith(nextNode);
         card._els.stageMedia = nextNode;
+        card._els.topbarMeta.textContent = `${product.title} • ${product.lightboxIndex + 1} / ${product.media.length}`;
+        card._els.prevBtn.disabled = product.media.length <= 1;
+        card._els.nextBtn.disabled = product.media.length <= 1;
         card._els.isMediaTransitioning = false;
 
         // v149g89: media node replaced; force hover class re-apply on next mousemove
