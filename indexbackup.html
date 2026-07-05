@@ -1,5 +1,20 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g89 hover early-exit
+Source: v149g88_webgl_needsupdate_fix
+Change:
+- desktop mousemove hover-cursor logic tracks the last dominant card; exits immediately when the hovered card has not changed
+- on change, strips the clickable-zone class from only the previous card instead of sweeping every media node on every card per event
+- tracker resets after lightbox media swaps so replaced nodes re-receive the class
+- tracker resets when mouseleave clears the tracked card
+Reason:
+- every mousemove previously ran two full card sweeps with querySelectorAll and class writes even when nothing changed
+Preserved:
+- geometry-based dominant-card resolver untouched (protected lightbox click architecture)
+- pointer cursor appears/disappears over clickable media exactly as before
+- z-axis / blur / WebGL / keyboard guard / mobile isolation retained
+-->
+<!--
 PaletteKnife v149g88 webgl per-frame needsUpdate fix
 Source: v149g87_mobile_panel_touch_isolation
 Change:
@@ -5908,17 +5923,29 @@ body.is-booting #panelDesc {
     cycleLightbox(dominantIndex);
   }
 
+  /*
+    v149g89 hover early-exit:
+    Previously every mousemove stripped the clickable-zone class from every
+    media node on every card, then re-added it to the dominant card, even
+    when the hovered card had not changed. Track the last dominant index:
+    if unchanged, do nothing; if changed, clear only the previous card and
+    class only the new one. The geometry-based dominant-card resolver is
+    untouched (protected lightbox click architecture). The tracker resets
+    whenever media nodes are swapped so a fresh node re-receives the class.
+  */
+  let lastHoverDominantIndex = null;
+
   function updateVisibleMediaHoverCursor(index, event) {
     const point = getEventClientPoint(event);
     const dominantIndex = point ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
 
-    cards.forEach((card) => {
-      if (!card || !card._els) return;
-      const mediaNodes = [];
-      if (card._els.frame) mediaNodes.push(...card._els.frame.querySelectorAll(".media-item"));
-      if (card._els.lightbox) mediaNodes.push(...card._els.lightbox.querySelectorAll(".media-item"));
-      mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
-    });
+    if (dominantIndex === lastHoverDominantIndex) return;
+
+    if (lastHoverDominantIndex !== null) {
+      clearVisibleMediaHoverCursor(lastHoverDominantIndex);
+    }
+
+    lastHoverDominantIndex = dominantIndex;
 
     if (dominantIndex === null) return;
 
@@ -5932,6 +5959,9 @@ body.is-booting #panelDesc {
   }
 
   function clearVisibleMediaHoverCursor(index) {
+    if (lastHoverDominantIndex === index) {
+      lastHoverDominantIndex = null;
+    }
     const card = cards[index];
     if (!card || !card._els) return;
     const mediaNodes = [
@@ -6205,6 +6235,9 @@ body.is-booting #panelDesc {
         card._els.prevBtn.disabled = product.media.length <= 1;
         card._els.nextBtn.disabled = product.media.length <= 1;
         card._els.isMediaTransitioning = false;
+
+        // v149g89: media node replaced; force hover class re-apply on next mousemove
+        lastHoverDominantIndex = null;
 
         if (index === currentCenteredIndex) {
           syncPanelSelectionToCurrentMedia(product);

@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g90 max-quantity CTA state
+Source: v149g89_hover_early_exit
+Change:
+- when the selected variant's max stock is already in the cart, the CTA now shows the approved is-out-of-stock grey treatment instead of looking fully active while natively disabled
+- detached mobile CTA inherits the treatment automatically via existing className sync
+- button text unchanged; the "Max quantity already in cart." validation line still explains why
+Reason:
+- this was the one CTA state that was disabled but visually identical to an active button (v124 audit M3, precisely scoped by re-examination)
+Preserved:
+- missing-selection state stays enabled with prompt-on-click (approved validate-on-click UX)
+- out-of-stock state unchanged
+- greyed sale states (not_for_sale/archive/sold_out) unchanged
+- mobile CTA sync order untouched (v125 fix retained)
+- z-axis / blur / WebGL / all prior fixes retained
+-->
+<!--
 PaletteKnife v149g89 hover early-exit
 Source: v149g88_webgl_needsupdate_fix
 Change:
@@ -6737,6 +6753,15 @@ body.is-booting #panelDesc {
           const stateAllowsPurchase = state === "for_sale" || state === "for sale" || state === "forsale" || state === "preorder" || state === "pre order" || state === "pre_order";
           const missingSelectionState = validation.message === "Select a colour." || validation.message === "Select a size.";
           const selectedVariantOutOfStock = validation.message === "Out of stock.";
+          /*
+            v149g90: "Max quantity already in cart." previously set native
+            disabled with no styling class, so the button looked fully
+            active while silently ignoring clicks. Reuse the approved
+            is-out-of-stock grey treatment (mobile CTA inherits it via
+            className sync). Button text unchanged; the validation line
+            below the button already explains why.
+          */
+          const maxQuantityInCart = validation.message === "Max quantity already in cart.";
           if (selectedVariantOutOfStock && stateAllowsPurchase) {
             primaryActionBtn.textContent = "Out of stock";
             primaryActionBtn.disabled = true;
@@ -6744,7 +6769,7 @@ body.is-booting #panelDesc {
           } else {
             primaryActionBtn.textContent = btnText;
             primaryActionBtn.disabled = stateAllowsPurchase ? (!validation.valid && !missingSelectionState) : false;
-            primaryActionBtn.classList.remove("is-out-of-stock");
+            primaryActionBtn.classList.toggle("is-out-of-stock", maxQuantityInCart && stateAllowsPurchase);
           }
         }
 
