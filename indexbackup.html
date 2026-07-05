@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g88 webgl per-frame needsUpdate fix
+Source: v149g87_mobile_panel_touch_isolation
+Change:
+- chrome header animate() loop no longer sets mat.needsUpdate = true on every frame
+- env map binding + roughness/metalness + needsUpdate now happen once, when the texture reference first binds
+- envMapIntensity (scroll-reactive brightness) still updates every frame
+Reason:
+- needsUpdate forced pointless material re-validation ~60x/sec; live lightbar reflections come from the CubeCamera rendering into the same render-target texture, which needs no re-validation after first bind
+Preserved:
+- CubeCamera updates every frame (approved live lightbar feature) untouched
+- scroll reactivity untouched (energy-driven envMapIntensity per frame)
+- one-time tuneMaterials() load setup untouched
+- visual output must be indistinguishable from v149g87 on all platforms
+- z-axis / blur / dropdown / mobile isolation fixes retained
+-->
+<!--
 PaletteKnife v149g87 mobile panel touch scroll isolation
 Source: v149g86_micro_hygiene
 Change:
@@ -8338,11 +8354,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (typeof proofChromeMaterials !== "undefined" && liveEnvTarget) {
       proofChromeMaterials.forEach(function (mat) {
-        mat.envMap = liveEnvTarget.texture;
+        /*
+          v149g88: bind the env map and flag needsUpdate only when the
+          texture reference actually changes (first frame). The CubeCamera
+          renders into this same render-target texture every frame, so live
+          reflections update without re-validating the material. Per-frame
+          needsUpdate forced pointless material re-validation ~60x/sec.
+          envMapIntensity stays per-frame: it drives scroll reactivity.
+        */
+        if (mat.envMap !== liveEnvTarget.texture) {
+          mat.envMap = liveEnvTarget.texture;
+          if ("roughness" in mat) mat.roughness = 0.0095;
+          if ("metalness" in mat) mat.metalness = 1.0;
+          mat.needsUpdate = true;
+        }
         mat.envMapIntensity = 7.95 + energy * 0.62;
-        if ("roughness" in mat) mat.roughness = 0.0095;
-        if ("metalness" in mat) mat.metalness = 1.0;
-        mat.needsUpdate = true;
       });
     }
 
