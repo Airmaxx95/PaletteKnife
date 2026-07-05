@@ -1,5 +1,20 @@
 <!DOCTYPE html>
 <!--
+PaletteKnife v149g86 micro hygiene
+Source: v149g85_keyboard_guard
+Change:
+- cartDrawerBody hoisted to top-level element consts; wheel handler and closePanelsFromOutsideTarget no longer re-query the DOM per event (navGrid re-query also removed)
+- panelDesc writes in renderPanel now null-guarded like every other panel element
+- removed dead validation comparison "Select a size & colour." (validateSelectionState can never produce it)
+- getEventClientPoint returns null on failure instead of a fake {0,0}; both call sites null-check, so clicks at true coordinate 0 are no longer rejected
+Preserved:
+- z-axis untouched
+- blur untouched
+- WebGL untouched
+- keyboard guard retained
+- all g84 fixes retained
+-->
+<!--
 PaletteKnife v149g85 keyboard interactive-target guard
 Source: v149g84_audit_fixes_batch1
 Change:
@@ -4619,6 +4634,7 @@ body.is-booting #panelDesc {
   const leftMetaASN = document.getElementById("leftMetaASN");
   const cartToggle = document.getElementById("cartToggle");
   const cartDrawer = document.getElementById("cartDrawer");
+  const cartDrawerBody = document.getElementById("cartDrawerBody");
   const cartClose = document.getElementById("cartClose");
   const cartItems = document.getElementById("cartItems");
   const cartTotal = document.getElementById("cartTotal");
@@ -5683,7 +5699,7 @@ body.is-booting #panelDesc {
       return { x: touch.clientX, y: touch.clientY };
     }
 
-    return { x: 0, y: 0 };
+    return null;
   }
 
   function resolveMediaNodeForCard(card) {
@@ -5802,7 +5818,7 @@ body.is-booting #panelDesc {
     if (isIgnoredUiTarget(target)) return;
 
     const point = getEventClientPoint(event);
-    if (!point.x || !point.y) return;
+    if (!point) return;
 
     const dominantIndex = getVisuallyDominantCardIndexAtPoint(point.x, point.y);
     if (dominantIndex === null) return;
@@ -5828,7 +5844,7 @@ body.is-booting #panelDesc {
 
   function updateVisibleMediaHoverCursor(index, event) {
     const point = getEventClientPoint(event);
-    const dominantIndex = (point.x && point.y) ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
+    const dominantIndex = point ? getVisuallyDominantCardIndexAtPoint(point.x, point.y) : null;
 
     cards.forEach((card) => {
       if (!card || !card._els) return;
@@ -6547,8 +6563,10 @@ body.is-booting #panelDesc {
           panelPrice.style.visibility = showPrice ? "visible" : "hidden";
         }
 
-        panelDesc.textContent = "";
-        panelDesc.style.display = "none";
+        if (panelDesc) {
+          panelDesc.textContent = "";
+          panelDesc.style.display = "none";
+        }
 
         if (panelEdition) {
           panelEdition.textContent = "";
@@ -6618,7 +6636,7 @@ body.is-booting #panelDesc {
 
         if (primaryActionBtn) {
           const stateAllowsPurchase = state === "for_sale" || state === "for sale" || state === "forsale" || state === "preorder" || state === "pre order" || state === "pre_order";
-          const missingSelectionState = validation.message === "Select a colour." || validation.message === "Select a size." || validation.message === "Select a size & colour.";
+          const missingSelectionState = validation.message === "Select a colour." || validation.message === "Select a size.";
           const selectedVariantOutOfStock = validation.message === "Out of stock.";
           if (selectedVariantOutOfStock && stateAllowsPurchase) {
             primaryActionBtn.textContent = "Out of stock";
@@ -7250,11 +7268,8 @@ body.is-booting #panelDesc {
   // INPUTS
   // =========================================================
   window.addEventListener("wheel", (e) => {
-    const cartDrawerBody = document.getElementById("cartDrawerBody");
-    const navGridEl = document.getElementById("navGrid");
-
     const inCart = cartDrawerBody && cartDrawer && cartDrawer.classList.contains("is-open") && cartDrawerBody.contains(e.target);
-    const inNav = navGridEl && navPanel && navPanel.classList.contains("is-open") && navGridEl.contains(e.target);
+    const inNav = navGrid && navPanel && navPanel.classList.contains("is-open") && navGrid.contains(e.target);
 
     if (inCart || inNav) {
       return;
@@ -7508,7 +7523,6 @@ body.is-booting #panelDesc {
   function closePanelsFromOutsideTarget(target) {
     if (shouldIgnoreOutsidePanelClose(target)) return;
 
-    const cartDrawerBody = document.getElementById("cartDrawerBody");
     const insideCart = !!(
       cartDrawerBody?.contains(target) ||
       cartClose?.contains(target) ||

@@ -1,20 +1,81 @@
 <!DOCTYPE html>
 <!--
-PaletteKnife v149g83 clean v149g60 + slide title no-fade
-Source: v149g60_mobile_media_nobutton_per_card_position
+PaletteKnife v149g85 keyboard interactive-target guard
+Source: v149g84_audit_fixes_batch1
 Change:
-- removes slide title/meta fade transitions
-- no opacity interpolation on slide title/meta
+- global keydown handler now ignores Space/Enter/Arrow keys when focus is on an interactive element (button, link, select, input, textarea) or inside panel/cart/nav/footer UI
+- restores Enter/Space activation of all buttons for keyboard users
+- restores ArrowUp/ArrowDown option navigation inside variant select dropdowns
+Reason:
+- handler had no event.target guard: Enter cycled the lightbox instead of activating focused buttons, Space reset to slide 1, arrows moved the rail instead of navigating focused selects (WCAG 2.1.1 keyboard failure)
 Preserved:
-- v149g60 desktop Safari behaviour
-- v149g60 mobile behaviour
+- identical shortcut behaviour when focus is on the page body (default browsing state)
+- Escape behaviour unchanged (still closes lightboxes globally)
+- z-axis physics untouched
+- blur untouched
+- WebGL untouched
+-->
+<!--
+PaletteKnife v149g84 audit fixes batch 1
+Source: v149g82_slide_title_no_fade_mobile
+Change:
+- removed console.table() product dump from boot()
+- checkout alert() replaced with inline cart-checkout-note (resets on drawer close)
+- removed dead closeNavPanel()/openNavPanel() functions
+- removed dead headerDrop/headerFade animation, both @keyframes blocks, orphaned brace
+- removed duplicate .logo CSS rule
+- product/cart images now receive real alt text via createMediaElement altText param
+Preserved:
+- z-axis untouched
+- blur untouched
+- WebGL untouched
+- dropdown system retained
+- media_nobutton per-card fix retained
+-->
+<!--
+PaletteKnife v149g82 mobile slide title no-fade
+Source: v149g80_lightbox_close_all_scroll_spike_fix
+Change:
+- mobile slide title/meta transitions disabled
+- title appears/disappears instantly instead of fading
+- v149g80 lightbox close-all scroll-spike fix retained
+Preserved:
 - blur untouched
 - z-axis untouched
 - WebGL untouched
 - dropdown system retained
 - media_nobutton per-card fix retained
-Excluded:
-- v149g61-v149g82 experimental scroll/performance chain
+-->
+<!--
+PaletteKnife v149g80 lightbox close-all scroll spike fix
+Source: v149g78_mobile_title_post_settle_only
+Change:
+- centered slide changes no longer call closeAllLightboxes()
+- scroll transitions close only genuinely open lightboxes
+Reason:
+- closeAllLightboxes() looped every product and could reset/swap media for closed slides, causing hidden mobile DOM/media work during singular slide changes.
+Preserved:
+- blur core feature untouched
+- title post-settle-only fix retained
+- z-axis physics untouched
+- burst scroll retained
+- dropdown system retained
+- media_nobutton per-card fix retained
+-->
+<!--
+PaletteKnife v149g78 mobile title post-settle only
+Source: approved v149g60_mobile_media_nobutton_per_card_position
+Change:
+- mobile slide title/meta hides during z-axis movement
+- title render/update is skipped while motion is active
+- title updates once after magnetised settle
+- media_nobutton title suppression preserved through existing shouldShowCenteredTitle logic
+Preserved:
+- blur core feature untouched
+- z-axis physics untouched
+- dropdown system retained
+- media_nobutton per-card fix retained
+- no WebGL/panel/touchmove experiments
 -->
 <!--
 PaletteKnife v149g60 mobile media_nobutton per-card position fix
@@ -986,6 +1047,14 @@ Change: title DOM/text/opacity writes are cached to avoid per-frame fixed overla
     justify-content: center;
   }
 
+  .cart-checkout-note {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgba(0,0,0,0.65);
+    text-align: center;
+  }
+
   .cart-qty-value {
     min-width: 20px;
     text-align: center;
@@ -1313,21 +1382,6 @@ Change: title DOM/text/opacity writes are cached to avoid per-frame fixed overla
   transform: translateX(-50%) translateY(-20px);
   z-index: 100;
   opacity: 0;
-  animation: headerDrop 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards, headerFade 220ms ease forwards;
-}
-
-@keyframes headerDrop {
-  to {
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes headerFade {
-  to {
-    opacity: 1;
-  }
-}
-
 }
 
 .header-inner {
@@ -1346,11 +1400,6 @@ Change: title DOM/text/opacity writes are cached to avoid per-frame fixed overla
 
 .site-header {
   cursor: pointer;
-}
-.logo {
-  font-family: "Atkinson Hyperlegible", Arial, sans-serif;
-  font-weight: 400;
-  font-size: clamp(14px, 1.4vw, 20px);
 }
 
 .slide-title-display {
@@ -4258,15 +4307,35 @@ body.is-booting #panelDesc {
 
 
 /* =========================================================
-   v149g83 SLIDE TITLE NO-FADE PATCH ON CLEAN v149g60
-   Removes title/meta fade interpolation while preserving v149g60 baseline.
+   v149g78 MOBILE TITLE POST-SETTLE ONLY
+   Keep blur core feature. Remove title/meta from mobile scroll hot path.
    ========================================================= */
-.slide-title-display,
-.slide-title-display *,
-.left-meta,
-.left-meta * {
-  transition: none !important;
-  animation: none !important;
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  body.is-zaxis-moving .slide-title-display,
+  body.is-zaxis-moving .left-meta {
+    opacity: 0 !important;
+  }
+}
+
+
+/* =========================================================
+   v149g82 MOBILE SLIDE TITLE NO-FADE
+   Built from v149g80 logic.
+   Removes fade/interpolation from slide title/meta on mobile.
+   ========================================================= */
+@media (max-width: 900px), (pointer: coarse), (hover: none) {
+  .slide-title-display,
+  .slide-title-display *,
+  .left-meta,
+  .left-meta * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  body.is-zaxis-moving .slide-title-display,
+  body.is-zaxis-moving .left-meta {
+    opacity: 0 !important;
+  }
 }
 
 </style>
@@ -4327,6 +4396,7 @@ body.is-booting #panelDesc {
           <span id="cartTotal">£0.00</span>
         </div>
         <button class="cart-checkout" id="cartCheckout" type="button">Proceed to Checkout</button>
+        <div class="cart-checkout-note hidden" id="cartCheckoutNote" role="status" aria-live="polite">Online checkout is coming soon. Your cart is saved and will be here when it launches.</div>
       </div>
     </div>
   </aside>
@@ -4661,6 +4731,37 @@ body.is-booting #panelDesc {
   let anchorTarget = null;
   let currentCenteredIndex = 0;
   let mobileNavJumpTargetIndex = null;
+  let lastZaxisMovingState = null;
+
+  function isMobileTitleRuntime() {
+    return !!(
+      window.matchMedia &&
+      (
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(hover: none)").matches ||
+        window.innerWidth <= 900
+      )
+    );
+  }
+
+  function setZaxisMovingState(isMoving) {
+    if (!isMobileTitleRuntime()) return;
+    const nextState = !!isMoving;
+    if (lastZaxisMovingState === nextState) return;
+    document.body.classList.toggle("is-zaxis-moving", nextState);
+    lastZaxisMovingState = nextState;
+  }
+
+  function isCurrentMotionActive() {
+    return (
+      introActive ||
+      returningToStart ||
+      anchorTarget !== null ||
+      Math.abs(velocity) > CONFIG.stopThreshold ||
+      Math.abs(targetVelocity) > CONFIG.stopThreshold ||
+      Math.abs(position - nearestAnchor(position)) > CONFIG.centerDeadband
+    );
+  }
 
   function isMobileNavJumpRuntime() {
     return !!(
@@ -4804,7 +4905,7 @@ body.is-booting #panelDesc {
       cartItems.innerHTML = CART.items.map((item, index) => `
         <div class="cart-item">
           <div class="cart-item-row">
-            <div class="cart-item-thumb">${getCartItemThumbnail(item) ? `<img src="${escapeHtml(getCartItemThumbnail(item))}" alt="">` : ""}</div>
+            <div class="cart-item-thumb">${getCartItemThumbnail(item) ? `<img src="${escapeHtml(getCartItemThumbnail(item))}" alt="${escapeHtml(item.title || "")}">` : ""}</div>
             <div class="cart-item-content">
               <div class="cart-item-top">
                 <div class="cart-item-title">${escapeHtml(item.title || "")}</div>
@@ -4882,23 +4983,11 @@ body.is-booting #panelDesc {
 
     cartClose.style.display = (!cartUiSuppressed && isOpen) ? "inline-flex" : "none";
     cartToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  }
 
-  function closeNavPanel() {
-    if (!navPanel || !navPanelToggle) return;
-    navPanel.classList.remove("is-open");
-    navPanel.classList.remove("is-closing");
-    navPanelToggle.setAttribute("aria-expanded", "false");
-    navPanelToggle.textContent = "Collection";
-  }
-
-  function openNavPanel() {
-    if (!navPanel || !navPanelToggle) return;
-    setCartDrawerOpen(false);
-    navPanel.classList.remove("is-closing");
-    navPanel.classList.add("is-open");
-    navPanelToggle.setAttribute("aria-expanded", "true");
-    navPanelToggle.textContent = "Close";
+    if (!isOpen) {
+      const cartCheckoutNote = document.getElementById("cartCheckoutNote");
+      if (cartCheckoutNote) cartCheckoutNote.classList.add("hidden");
+    }
   }
 
   function getRequiredSelections(product) {
@@ -5770,7 +5859,7 @@ body.is-booting #panelDesc {
     mediaNodes.forEach((node) => node.classList.remove("is-media-clickable-zone"));
   }
 
-  function createMediaElement(media, { autoplay = false, muted = true, loop = false } = {}) {
+  function createMediaElement(media, { autoplay = false, muted = true, loop = false, altText = "" } = {}) {
     if (!media) return document.createElement("div");
 
     if (media.kind === "video") {
@@ -5871,7 +5960,7 @@ body.is-booting #panelDesc {
     const img = document.createElement("img");
     img.className = "media-item";
     img.src = media.src;
-    img.alt = "";
+    img.alt = String(altText || "");
     img.loading = "eager";
     img.dataset.kind = media.kind;
     return img;
@@ -5899,7 +5988,7 @@ body.is-booting #panelDesc {
 
       const frame = document.createElement("div");
       frame.className = "media-frame";
-      frame.appendChild(createMediaElement(product.media[0]));
+      frame.appendChild(createMediaElement(product.media[0], { altText: product.title || "" }));
 
       const lightbox = document.createElement("div");
       lightbox.className = "lightbox-stage";
@@ -5922,7 +6011,7 @@ body.is-booting #panelDesc {
 
       topbar.append(meta, closeBtn);
 
-      const stageMedia = createMediaElement(product.media[0], { autoplay: true, muted: true, loop: true });
+      const stageMedia = createMediaElement(product.media[0], { autoplay: true, muted: true, loop: true, altText: product.title || "" });
       lightbox.appendChild(stageMedia);
       lightbox.appendChild(topbar);
 
@@ -5994,7 +6083,7 @@ body.is-booting #panelDesc {
 
     const media = product.media[product.lightboxIndex];
     const currentNode = card._els.stageMedia;
-    const nextNode = createMediaElement(media, { autoplay: true, muted: true, loop: true });
+    const nextNode = createMediaElement(media, { autoplay: true, muted: true, loop: true, altText: product.title || "" });
 
     const outgoingWrap = document.createElement("div");
     outgoingWrap.className = "lightbox-transition-media is-visible";
@@ -6660,7 +6749,7 @@ body.is-booting #panelDesc {
 
       const media = product.media && product.media[0] ? product.media[0] : null;
       if (media) {
-        const el = createMediaElement(media, { autoplay: false, muted: true, loop: false });
+        const el = createMediaElement(media, { autoplay: false, muted: true, loop: false, altText: product.title || "" });
         if (el.tagName === "VIDEO") {
           el.muted = true;
           el.loop = true;
@@ -6901,7 +6990,7 @@ body.is-booting #panelDesc {
       if ((!isMobileNavJumpActive && !shouldDeferMobileBurstScroll) || shouldReleaseMobileNavJump) {
         const finalCentered = shouldReleaseMobileNavJump ? mobileNavJumpTargetIndex : newCentered;
 
-        closeAllLightboxes();
+        closeOpenLightboxesOnly();
         currentCenteredIndex = finalCentered;
         setPanelValidationMessage("");
         renderPanel(currentCenteredIndex);
@@ -6923,7 +7012,9 @@ body.is-booting #panelDesc {
       }
     }
 
-    renderSlideTitle();
+    if (!isMobileTitleRuntime() || !isCurrentMotionActive()) {
+      renderSlideTitle();
+    }
   }
 
   function render() {
@@ -7002,28 +7093,34 @@ body.is-booting #panelDesc {
       targetVelocity = 0;
     }
 
+    const stillMoving = (
+      introActive ||
+      Math.abs(velocity) > CONFIG.stopThreshold ||
+      Math.abs(targetVelocity) > CONFIG.stopThreshold ||
+      Math.abs(position - nearestAnchor(position)) > CONFIG.centerDeadband
+    );
+
+    setZaxisMovingState(stillMoving);
+
     renderAll();
     try {
       window.dispatchEvent(new CustomEvent("paletteknife:zaxis", { detail: { position: position, velocity: velocity, targetVelocity: targetVelocity } }));
     } catch (error) {}
 
-    if (
-      introActive ||
-      Math.abs(velocity) > CONFIG.stopThreshold ||
-      Math.abs(targetVelocity) > CONFIG.stopThreshold ||
-      Math.abs(position - nearestAnchor(position)) > CONFIG.centerDeadband
-    ) {
+    if (stillMoving) {
       raf = requestAnimationFrame(render);
     } else {
       position = nearestAnchor(position);
       velocity = 0;
       targetVelocity = 0;
+      setZaxisMovingState(false);
       renderAll();
       raf = null;
     }
   }
 
   function start() {
+    setZaxisMovingState(true);
     if (raf === null) raf = requestAnimationFrame(render);
   }
 
@@ -7122,6 +7219,23 @@ body.is-booting #panelDesc {
     PRODUCTS.forEach((_, i) => closeLightbox(i, true));
   }
 
+  function closeOpenLightboxesOnly() {
+    /*
+      v149g80:
+      The normal slide-centered-change path was calling closeAllLightboxes(),
+      which loops every product and can reset/swap media for closed slides too
+      when their lightboxIndex is not zero. That hidden media work is poisonous
+      during mobile scroll and explains one-slide stutter that survives title,
+      blur, WebGL and input tests. For scroll transitions, close only genuinely
+      open lightboxes.
+    */
+    PRODUCTS.forEach((product, i) => {
+      if (product && product.lightboxOpen) {
+        closeLightbox(i, true);
+      }
+    });
+  }
+
   function shiftLightbox(index, direction) {
     const product = PRODUCTS[index];
     const card = cards[index];
@@ -7154,28 +7268,54 @@ body.is-booting #panelDesc {
     start();
   }, { passive: false });
 
+  /*
+    v149g85 keyboard interactive-target guard:
+    The global shortcuts below (Space/Enter/Arrows) previously fired and
+    called preventDefault() regardless of focus. That hijacked Enter/Space
+    activation of buttons and broke ArrowUp/ArrowDown option navigation in
+    the variant <select> dropdowns. When focus is on an interactive element
+    or inside fixed UI panels, let the browser handle the key natively.
+    Escape is intentionally NOT guarded so lightbox close keeps its existing
+    global behaviour. With focus on the page body (default browsing state),
+    all shortcuts behave exactly as before.
+  */
+  function isInteractiveKeyTarget(target) {
+    if (!target || typeof target.closest !== "function") return false;
+    if (target.isContentEditable) return true;
+    return !!target.closest(
+      "button, a[href], select, input, textarea, [contenteditable], .panel, .nav-panel, .cart-drawer, .site-footer"
+    );
+  }
+
   window.addEventListener("keydown", (e) => {
+    const interactiveTarget = isInteractiveKeyTarget(e.target);
+
     if (e.code === "Space") {
+      if (interactiveTarget) return;
       e.preventDefault();
       resetToFirstSlide();
     }
     if (e.code === "ArrowDown") {
+      if (interactiveTarget) return;
       e.preventDefault();
       goToSlide(1);
       scheduleIdleAutoSettle();
     }
     if (e.code === "ArrowUp") {
+      if (interactiveTarget) return;
       e.preventDefault();
       goToSlide(-1);
       scheduleIdleAutoSettle();
     }
     if (e.code === "ArrowRight") {
+      if (interactiveTarget) return;
       if (PRODUCTS[currentCenteredIndex]?.lightboxOpen) {
         e.preventDefault();
         shiftLightbox(currentCenteredIndex, 1);
       }
     }
     if (e.code === "ArrowLeft") {
+      if (interactiveTarget) return;
       if (PRODUCTS[currentCenteredIndex]?.lightboxOpen) {
         e.preventDefault();
         shiftLightbox(currentCenteredIndex, -1);
@@ -7185,6 +7325,7 @@ body.is-booting #panelDesc {
       closeAllLightboxes();
     }
     if (e.code === "Enter") {
+      if (interactiveTarget) return;
       if (cards[currentCenteredIndex]) {
         e.preventDefault();
         cycleLightbox(currentCenteredIndex);
@@ -7292,14 +7433,6 @@ body.is-booting #panelDesc {
       if (!PRODUCTS.length) {
         throw new Error("No visible products with media were found in the CSV.");
       }
-
-      console.table(PRODUCTS.map((product) => ({
-        displayOrderIndex: product.displayOrderIndex,
-        ASN: product.id,
-        Date_Added: product.dateAdded,
-        Sort_Order: product.sortOrder,
-        csvRowIndex: product.csvRowIndex
-      })));
 
       cards = buildSlides();
       buildNavGrid();
@@ -7483,13 +7616,16 @@ body.is-booting #panelDesc {
   }
 
   if (cartCheckout) {
+    const cartCheckoutNote = document.getElementById("cartCheckoutNote");
     cartCheckout.addEventListener("click", () => {
       trackAnalyticsEvent("begin_checkout", {
         currency: "GBP",
         value: Number(getCartTotal() || 0),
         items_in_cart: Number(getCartCount() || 0)
       });
-      alert("Checkout wiring is next. Cart state is now working and saved locally.");
+      if (cartCheckoutNote) {
+        cartCheckoutNote.classList.remove("hidden");
+      }
     });
   }
 
